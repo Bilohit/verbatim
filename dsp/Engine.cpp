@@ -13,38 +13,45 @@ namespace vbdsp
 struct Chain
 {
     std::vector<std::unique_ptr<Lane>> lanes;
-    std::vector<float> laneL, laneR, sumL, sumR;
+    std::vector<bool> summed;                 // false for a lane consumed by the next lane's chain (&)
+    std::vector<std::vector<float>> outL, outR; // per-lane output
+    std::vector<float> sumL, sumR;
+    float norm = 1.0f;                        // 1 / sqrt(lanes in the sum)
 
     // Output: dry*(1-mix) + wet*mix, or dry when there are no lanes. Returns NaN-guard events.
     int render (const float* inL, const float* inR, const float* dryL, const float* dryR, const float* mix,
-                float* outL, float* outR, int n) // audio-thread
+                float* oL, float* oR, int n) // audio-thread
     {
         if (lanes.empty())
         {
-            std::copy (dryL, dryL + n, outL);
-            std::copy (dryR, dryR + n, outR);
+            std::copy (dryL, dryL + n, oL);
+            std::copy (dryR, dryR + n, oR);
             return 0;
         }
         std::fill (sumL.begin(), sumL.begin() + n, 0.0f);
         std::fill (sumR.begin(), sumR.begin() + n, 0.0f);
         int nans = 0;
-        for (auto& lane : lanes)
+        for (std::size_t i = 0; i < lanes.size(); ++i)
         {
-            const int before = lane->nanCount();
-            lane->process (inL, inR, laneL.data(), laneR.data(), n);
-            nans += lane->nanCount() - before;
-            for (std::size_t k = 0; k < static_cast<std::size_t> (n); ++k)
-            {
-                sumL[k] += laneL[k];
-                sumR[k] += laneR[k];
-            }
+            auto& lane = *lanes[i];
+            const bool chained = i > 0 && lane.takesPreviousLane();
+            const float* srcL = chained ? outL[i - 1].data() : inL;
+            const float* srcR = chained ? outR[i - 1].data() : inR;
+            const int before = lane.nanCount();
+            lane.process (srcL, srcR, outL[i].data(), outR[i].data(), n);
+            nans += lane.nanCount() - before;
+            if (summed[i])
+                for (std::size_t k = 0; k < static_cast<std::size_t> (n); ++k)
+                {
+                    sumL[k] += outL[i][k];
+                    sumR[k] += outR[i][k];
+                }
         }
-        const float norm = 1.0f / std::sqrt (static_cast<float> (lanes.size()));
         for (int i = 0; i < n; ++i)
         {
             const auto k = static_cast<std::size_t> (i);
-            outL[i] = dryL[i] * (1.0f - mix[i]) + sumL[k] * norm * mix[i];
-            outR[i] = dryR[i] * (1.0f - mix[i]) + sumR[k] * norm * mix[i];
+            oL[i] = dryL[i] * (1.0f - mix[i]) + sumL[k] * norm * mix[i];
+            oR[i] = dryR[i] * (1.0f - mix[i]) + sumR[k] * norm * mix[i];
         }
         return nans;
     }
@@ -63,16 +70,35 @@ Engine::~Engine()
 Chain* Engine::build (const vb::ChainSpec& spec) const
 {
     auto* c = new Chain();
+    const auto m = static_cast<std::size_t> (maxBlock);
     for (const auto& l : spec.lanes)
     {
         std::vector<vb::ModuleSpec> mods (l.slots.begin(), l.slots.begin() + l.nModules);
         auto lane = std::make_unique<Lane> (l, mods);
-        lane->prepare (sampleRate, maxBlock, lFixed);
+        lane->prepare (sampleRate, maxBlock);
         c->lanes.push_back (std::move (lane));
+        c->outL.emplace_back (m, 0.0f);
+        c->outR.emplace_back (m, 0.0f);
     }
-    const auto m = static_cast<std::size_t> (maxBlock);
-    c->laneL.assign (m, 0.0f);
-    c->laneR.assign (m, 0.0f);
+
+    // Chain groups (docs/03-dsp-catalog.md 1.1): a lane consumed by the next lane's & leaves the sum;
+    // the summed lane at the end of each group is padded so the group's latency is L_FIXED.
+    const auto count = c->lanes.size();
+    c->summed.assign (count, true);
+    int groupLatency = 0, summedLanes = 0;
+    for (std::size_t i = 0; i < count; ++i)
+    {
+        groupLatency += c->lanes[i]->latencySamples();
+        const bool consumed = i + 1 < count && c->lanes[i + 1]->takesPreviousLane();
+        c->summed[i] = ! consumed;
+        if (! consumed)
+        {
+            c->lanes[i]->setPad (lFixed - groupLatency);
+            groupLatency = 0;
+            ++summedLanes;
+        }
+    }
+    c->norm = summedLanes > 0 ? 1.0f / std::sqrt (static_cast<float> (summedLanes)) : 1.0f;
     c->sumL.assign (m, 0.0f);
     c->sumR.assign (m, 0.0f);
     return c;
