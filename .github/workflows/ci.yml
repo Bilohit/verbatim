@@ -29,7 +29,8 @@ jobs:
               --validate build/Verbatim_artefacts/Release/VST3/Verbatim.vst3
           done
 
-  # Core-only jobs: golden determinism on other compilers and OSes (docs/06-test-plan.md CI matrix).
+  # Other compilers and OSes (docs/06-test-plan.md CI matrix): win-clangcl and linux-clang run core + dsp,
+  # linux-gcc and macos-clang run core only.
   core:
     strategy:
       fail-fast: false
@@ -43,16 +44,19 @@ jobs:
             configure: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DVERBATIM_BUILD_PLUGIN=OFF
           - name: linux-gcc
             os: ubuntu-latest
-            configure: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ -DVERBATIM_BUILD_PLUGIN=OFF
+            configure: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ -DVERBATIM_BUILD_PLUGIN=OFF -DVERBATIM_BUILD_DSP=OFF
           - name: macos-clang
             os: macos-latest
-            configure: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DVERBATIM_BUILD_PLUGIN=OFF
+            configure: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DVERBATIM_BUILD_PLUGIN=OFF -DVERBATIM_BUILD_DSP=OFF
     name: ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: ilammy/msvc-dev-cmd@v1
         if: matrix.name == 'win-clangcl'
+      - name: JUCE build dependencies
+        if: matrix.name == 'linux-clang'
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libfreetype-dev libfontconfig1-dev libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxext-dev libgl1-mesa-dev
       - name: Configure
         run: ${{ matrix.configure }}
       - name: Build

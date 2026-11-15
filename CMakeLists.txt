@@ -17,12 +17,24 @@ endif()
 
 include(FetchContent)
 
-# Non-Windows CI jobs build only core and its tests, without JUCE.
+# Core-only CI jobs (linux-gcc, macos-clang) turn DSP and plugin off and never fetch JUCE.
+option(VERBATIM_BUILD_DSP "Build the DSP engine and its tests (fetches JUCE)" ON)
 option(VERBATIM_BUILD_PLUGIN "Build the JUCE plugin" ON)
 option(VERBATIM_BUILD_TESTS "Build the test suites" ON)
 
 add_subdirectory(core)
 add_subdirectory(tools)
+
+if(VERBATIM_BUILD_DSP OR VERBATIM_BUILD_PLUGIN)
+    # JUCE is pinned to one 8.0.x tag (docs/02-spec.md A4). Changing it needs the owner's approval.
+    FetchContent_Declare(JUCE
+        GIT_REPOSITORY https://github.com/juce-framework/JUCE.git
+        GIT_TAG        8.0.17-security
+        GIT_SHALLOW    TRUE)
+    FetchContent_MakeAvailable(JUCE)
+    add_subdirectory(dsp)
+endif()
+
 if(VERBATIM_BUILD_TESTS)
     enable_testing()
     add_subdirectory(tests)
@@ -30,13 +42,6 @@ endif()
 if(NOT VERBATIM_BUILD_PLUGIN)
     return()
 endif()
-
-# JUCE is pinned to one 8.0.x tag (docs/02-spec.md A4). Changing it needs the owner's approval.
-FetchContent_Declare(JUCE
-    GIT_REPOSITORY https://github.com/juce-framework/JUCE.git
-    GIT_TAG        8.0.17-security
-    GIT_SHALLOW    TRUE)
-FetchContent_MakeAvailable(JUCE)
 
 juce_add_plugin(Verbatim
     COMPANY_NAME             "Verbatim Audio"
@@ -52,7 +57,9 @@ juce_add_plugin(Verbatim
     COPY_PLUGIN_AFTER_BUILD  FALSE)
 
 target_sources(Verbatim PRIVATE
-    plugin/VerbatimProcessor.cpp)
+    plugin/VerbatimProcessor.cpp
+    ${VERBATIM_DSP_SOURCES})
+target_include_directories(Verbatim PRIVATE ${PROJECT_SOURCE_DIR})
 
 target_compile_definitions(Verbatim PUBLIC
     JUCE_WEB_BROWSER=0
@@ -63,6 +70,8 @@ target_compile_definitions(Verbatim PUBLIC
 target_link_libraries(Verbatim
     PRIVATE
         juce::juce_audio_utils
+        juce::juce_dsp
+        verbatim_core
     PUBLIC
         juce::juce_recommended_config_flags
         juce::juce_recommended_lto_flags

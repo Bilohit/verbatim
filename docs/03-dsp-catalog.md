@@ -94,7 +94,7 @@ Note length `T = (4 / timeDiv)` beats at host tempo (120 BPM if unknown). Used b
 | | p1 tone | TONE + | `lin(−6, 6)` dB tilt at 1 kHz, after the shaper | |
 | | p2 shape | | `disc(4)`: tanh, asymmetric tube (`tanh(x + 0.3·x²)` DC-blocked), hard clip with 0.1 knee, sine fold | |
 | | p3 bias | | `lin(0, 0.25)` DC offset before the shaper, removed after | |
-| | mix | DEPTH + | `lin(0.5, 1.0)` | Output trim `−0.5 · drive` dB. 2× oversampled. |
+| | mix | DEPTH + | `lin(0.5, 1.0)` | Output trim `−0.5 · drive` dB. 4× oversampled. |
 | 1 CRUSH | p0 bits | HEAT − | `lin(4, 12)` bits, fractional allowed | Quantize with TPDF-free rounding. |
 | | p1 rate | TONE + | `exp(2000, 24000)` Hz sample-and-hold | Mod range ±1 octave. |
 | | p2 jitter | | `lin(0, 0.3)` of the hold period, from module PRNG | |

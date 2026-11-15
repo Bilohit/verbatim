@@ -40,7 +40,7 @@ The corpus hashes are first produced by `tools/vb_spec` only after G1 and G2 pas
 
 | ID | Test | Pass |
 |---|---|---|
-| D1 | Null: module with mix 0; lane with all modules mix 0; Mix 0 globally; empty text at Mix 100; lane with zero modules. Each vs delayed dry | difference below −120 dBFS |
+| D1 | Null: module with mix 0; lane with all modules mix 0; Mix 0 globally; empty text at Mix 100; lane with zero modules. Each vs delayed dry; the lane-level cases (all modules mix 0, zero modules) vs delayed dry through the lane 5 Hz DC blocker (ruling at T05) | difference below −120 dBFS |
 | D2 | Impulse: impulse in, 10 s out | finite, decays below −90 dBFS within the module's max tail (table in test), no DC above −80 dBFS |
 | D3 | Filter response: FILTER LP/HP/BP/notch at 3 cutoffs × 2 Q × 2 slopes, measured with a log sweep | −3 dB point within ±5 % of cutoff; slope within ±1.5 dB/oct of nominal one octave past cutoff |
 | D4 | Feedback stability: DELAY, COMB, PHASER, FLANGE, PITCH at max feedback, lane feedback 3, with 0 dBFS noise burst then silence | output decays; peak never above 1.0 before SafetyClip × 4 (12 dB) |

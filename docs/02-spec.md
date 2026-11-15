@@ -9,7 +9,7 @@ Names follow the glossary in `00-brief.md`. Grammar: `04-seed-grammar.md`. Effec
 | Type | Stereo audio effect (insert). Buses: mono→mono, mono→stereo, stereo→stereo. Internal processing is always stereo. |
 | Format / OS | VST3, Windows 10 and 11, x64. |
 | Sample rates | 44.1 to 192 kHz. Block size 16 to 8192, any. |
-| Latency | Constant, reported once in `prepareToPlay`: `L_FIXED = 8 × L_SAT` samples (`L_SAT` = integer latency of the 2× oversampler, read at prepare; 8 = 4 lanes × 2 SAT, the worst chained case). Never changes while loaded. |
+| Latency | Constant, reported once in `prepareToPlay`: `L_FIXED = 8 × L_SAT` samples (`L_SAT` = integer latency of the 4× oversampler (owner decision at T05, was 2×), read at prepare; 8 = 4 lanes × 2 SAT, the worst chained case). Never changes while loaded. |
 | Host parameters | `mix` 0..100 %, default 100. `macro` 0..1, default 0.5. `output` −24..+12 dB, default 0. `bypass` (host bypass). All automatable, all smoothed 20 ms. |
 | Not host parameters | Seed text, overrides, generated module params. They live in plugin state. |
 | Licence | AGPLv3. Dependencies must be AGPL-compatible. |
@@ -135,7 +135,7 @@ Lane stages and constants: `03-dsp-catalog.md` §1.
 ## 8. Realtime rules
 - Audio thread: no allocation, no locks, no syscalls, no exceptions. All buffers sized in `prepare` for `maxBlock` and the worst-case sample rate factor.
 - Communication: atomics (params, meters, pending chain pointer) and one lock-free FIFO (retire).
-- Oversampling: SAT only, 2×, `juce::dsp::Oversampling` half-band FIR equiripple with integer latency.
+- Oversampling: SAT only, 4× (two half-band stages; owner decision at T05 because 2× cannot meet D6), `juce::dsp::Oversampling` half-band FIR equiripple with integer latency.
 - Checks: RealtimeSanitizer job on Linux clang for the dsp test binary, plus an allocation guard in the Windows test binary (`06-test-plan.md` RT).
 
 ## 9. Decisions (options compared)
