@@ -22,6 +22,7 @@ option(VERBATIM_BUILD_PLUGIN "Build the JUCE plugin" ON)
 option(VERBATIM_BUILD_TESTS "Build the test suites" ON)
 
 add_subdirectory(core)
+add_subdirectory(tools)
 if(VERBATIM_BUILD_TESTS)
     enable_testing()
     add_subdirectory(tests)
