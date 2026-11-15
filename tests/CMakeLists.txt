@@ -9,9 +9,17 @@ include(Catch)
 add_executable(verbatim_core_tests
     core/primitives.test.cpp
     core/parse.test.cpp
-    core/generate.test.cpp)
+    core/generate.test.cpp
+    core/golden.test.cpp)
 target_link_libraries(verbatim_core_tests PRIVATE verbatim_core Catch2::Catch2WithMain)
+target_compile_definitions(verbatim_core_tests PRIVATE VERBATIM_GOLDEN_DIR="${CMAKE_CURRENT_SOURCE_DIR}/golden")
 catch_discover_tests(verbatim_core_tests)
+
+# G4 guard script self-test.
+find_package(Python3 COMPONENTS Interpreter)
+if(Python3_FOUND)
+    add_test(NAME G4_golden_guard_selftest COMMAND Python3::Interpreter -I ${PROJECT_SOURCE_DIR}/tools/check_golden.py --self-test)
+endif()
 
 # T02 acceptance: core/ has no JUCE include and no floating-point type.
 add_test(NAME core_no_float_no_juce

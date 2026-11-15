@@ -29,6 +29,26 @@ jobs:
               --validate build/Verbatim_artefacts/Release/VST3/Verbatim.vst3
           done
 
+  # G4: corpus.hashes may only change in commits tagged [grammar-change-approved].
+  golden-guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Self-test
+        run: python3 tools/check_golden.py --self-test
+      - name: Check pushed commits
+        env:
+          BEFORE: ${{ github.event.before }}
+        run: |
+          if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
+            RANGE="HEAD"
+          else
+            RANGE="$BEFORE..HEAD"
+          fi
+          python3 tools/check_golden.py "$RANGE"
+
   # Other compilers and OSes (docs/06-test-plan.md CI matrix): win-clangcl and linux-clang run core + dsp,
   # linux-gcc and macos-clang run core only.
   core:
