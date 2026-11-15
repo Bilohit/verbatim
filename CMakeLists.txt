@@ -8,11 +8,27 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Determinism contract C7 (docs/02-spec.md): precise floating point, no contraction, never fast-math.
 if(MSVC)
     add_compile_options(/fp:precise /utf-8)
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+        add_compile_options(/clang:-ffp-contract=off)
+    endif()
 else()
     add_compile_options(-ffp-contract=off -fno-fast-math)
 endif()
 
 include(FetchContent)
+
+# Non-Windows CI jobs build only core and its tests, without JUCE.
+option(VERBATIM_BUILD_PLUGIN "Build the JUCE plugin" ON)
+option(VERBATIM_BUILD_TESTS "Build the test suites" ON)
+
+add_subdirectory(core)
+if(VERBATIM_BUILD_TESTS)
+    enable_testing()
+    add_subdirectory(tests)
+endif()
+if(NOT VERBATIM_BUILD_PLUGIN)
+    return()
+endif()
 
 # JUCE is pinned to one 8.0.x tag (docs/02-spec.md A4). Changing it needs the owner's approval.
 FetchContent_Declare(JUCE
