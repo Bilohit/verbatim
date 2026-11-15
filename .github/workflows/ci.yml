@@ -1,0 +1,27 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  win-msvc:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        run: cmake -S . -B build -A x64
+
+      - name: Build plugin
+        run: cmake --build build --config Release --target Verbatim_VST3 --parallel
+
+      - name: pluginval (strictness 5, 3 seeds)
+        shell: bash
+        run: |
+          curl -sSfL -o pluginval.zip https://github.com/Tracktion/pluginval/releases/download/v1.0.4/pluginval_Windows.zip
+          unzip -q pluginval.zip
+          for seed in 1 2 3; do
+            ./pluginval.exe --strictness-level 5 --skip-gui-tests --seed $seed \
+              --validate build/Verbatim_artefacts/Release/VST3/Verbatim.vst3
+          done
