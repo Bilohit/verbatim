@@ -1,0 +1,394 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Verbatim directions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400..700&family=Bricolage+Grotesque:opsz,wght@12..96,400..700&family=Courier+Prime:wght@400;700&family=IBM+Plex+Mono:wght@400;600&family=JetBrains+Mono:wght@400;600&family=Newsreader:ital,opsz,wght@0,6..72,400..600;1,6..72,400&display=swap" rel="stylesheet">
+<style>
+/* Hallmark · component: plugin editor mock · genre: per theme · theme: custom x5 (ember, postmark, phosphor, proof, console)
+ * Throwaway prototype. Proves visual direction only. The grammar in the script is illustrative, not the spec (see 04-seed-grammar.md).
+ * Production motion lives in gui/src via framer-motion (animotion); here it is CSS, transform and opacity only. */
+:root {
+  --shell-bg: oklch(15% 0.006 260);
+  --shell-ink: oklch(93% 0.005 260);
+  --shell-ink-2: oklch(72% 0.01 260);
+  --shell-rule: oklch(32% 0.01 260);
+  --shell-accent: oklch(80% 0.13 85);
+  --font-shell: "Archivo", system-ui, sans-serif;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s6: 24px; --s8: 32px;
+}
+*, *::before, *::after { box-sizing: border-box; }
+html, body { overflow-x: clip; }
+body { margin: 0; background: var(--shell-bg); color: var(--shell-ink); font-family: var(--font-shell); line-height: 1.5; }
+.shell { max-width: 1040px; margin: 0 auto; padding: var(--s6) var(--s4) var(--s8); }
+.shell h1 { font-size: 1.25rem; font-weight: 600; margin: 0 0 var(--s3); text-wrap: balance; }
+.pick { border: 0; padding: 0; margin: 0 0 var(--s2); display: flex; flex-wrap: wrap; gap: var(--s2); }
+.pick legend { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.pick label { cursor: pointer; }
+.pick input { position: absolute; opacity: 0; }
+.pick span { display: block; padding: var(--s2) var(--s3); border: 1px solid var(--shell-rule); border-radius: 6px; color: var(--shell-ink-2); white-space: nowrap; transition: color 150ms var(--ease-out), border-color 150ms var(--ease-out); }
+.pick label:hover span { color: var(--shell-ink); border-color: var(--shell-ink-2); }
+.pick input:checked + span { color: var(--shell-bg); background: var(--shell-accent); border-color: var(--shell-accent); font-weight: 600; }
+.pick input:focus-visible + span { outline: 2px solid var(--shell-ink); outline-offset: 2px; }
+.note { color: var(--shell-ink-2); margin: 0 0 var(--s4); max-width: 70ch; min-height: 3em; }
+
+/* ---------- plugin: shared structure ---------- */
+.plugin {
+  --radius: 6px; --text-size: 1.5rem; --text-weight: 500; --text-lh: 1.3;
+  background: var(--bg); color: var(--ink); font-family: var(--font-ui);
+  display: grid; gap: var(--s4); padding: var(--s6);
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: "head" "ed" "status" "lanes" "globals";
+  min-height: 560px; border-radius: 10px; overflow: auto;
+}
+@media (min-width: 800px) { .plugin { resize: both; min-width: 640px; max-width: 100%; } }
+.plugin ::selection { background: var(--sel); }
+.p-head { grid-area: head; display: flex; justify-content: space-between; align-items: baseline; gap: var(--s4); flex-wrap: wrap; }
+.mark { font-weight: 700; font-size: 1rem; letter-spacing: 0.02em; }
+.seed { font-family: var(--font-data); font-size: 0.8125rem; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.seed b { color: var(--ink); font-weight: 600; }
+.ed { grid-area: ed; position: relative; min-width: 0; }
+.ed-layer, .ed textarea {
+  font-family: var(--font-text); font-size: var(--text-size); font-weight: var(--text-weight); line-height: var(--text-lh);
+  letter-spacing: var(--text-track, 0); white-space: pre-wrap; overflow-wrap: anywhere; margin: 0; padding: 0; border: 0;
+}
+.ed-layer { min-height: calc(var(--text-size) * var(--text-lh) * 3); }
+.ed-hot { position: absolute; inset: 0; pointer-events: none; color: var(--accent); }
+.ed textarea { position: absolute; inset: 0; width: 100%; height: 100%; resize: none; overflow: hidden; background: transparent; color: transparent; caret-color: var(--accent); outline: none; }
+.ed:focus-within { outline: 2px solid var(--focus); outline-offset: 8px; border-radius: 2px; }
+.ed textarea::placeholder { color: var(--ink-2); }
+.c-op { color: var(--op); font-weight: 700; }
+.c-dir { color: var(--dir); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 0.18em; }
+.c-num { color: var(--dir); }
+.c-off { color: var(--ink-2); text-decoration: line-through; }
+.ed-hot span { opacity: 0; animation: heat var(--dur, 2.4s) var(--ease-in-out) infinite; animation-delay: calc(var(--i) * -80ms); }
+.ed-hot .c-off { animation: none; }
+@keyframes heat { 0%, 100% { opacity: 0.04; } 50% { opacity: var(--peak, 0.7); } }
+.status { grid-area: status; margin: 0; font-size: 0.875rem; color: var(--ink-2); min-height: 1.5em; }
+.status[data-kind="error"] { color: var(--err); }
+
+.lanes { grid-area: lanes; list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s3); align-content: start; }
+.lane { display: grid; grid-template-columns: auto minmax(0, 1fr) 72px; gap: var(--s2) var(--s3); align-items: center; }
+.lane-id { font-family: var(--font-data); font-size: 0.75rem; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.mods { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--s2); min-width: 0; }
+.mod-face { display: grid; gap: var(--s1); padding: var(--s2) var(--s3); border: 1px solid var(--rule); border-radius: var(--radius); background: var(--surface); }
+.mod.in { animation: modin 260ms var(--ease-out) both; animation-delay: calc(var(--i) * 45ms); }
+@keyframes modin { from { opacity: 0; transform: translateY(8px); } }
+.mod-top { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); }
+.mod-name { font-family: var(--font-data); font-size: 0.8125rem; font-weight: 600; letter-spacing: 0.04em; }
+.lock { font: inherit; font-size: 0.75rem; padding: 2px var(--s2); color: var(--ink-2); background: none; border: 1px solid transparent; border-radius: var(--radius); cursor: pointer; }
+.lock:hover { color: var(--ink); border-color: var(--rule); }
+.lock:active { transform: translateY(1px); }
+.lock:focus-visible, .adv:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.lock[aria-pressed="true"] { color: var(--cold); border-color: var(--cold); }
+.mod[data-locked] .mod-face { border-color: var(--cold); }
+.mod[data-locked] .mod-name { color: var(--cold); }
+.mod-params { display: none; margin: 0; font-family: var(--font-data); font-size: 0.75rem; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.mod-params div { display: flex; justify-content: space-between; gap: var(--s3); }
+.mod-params dd { margin: 0; color: var(--ink); }
+.plugin.is-adv .mod-params { display: grid; }
+.meter { height: 6px; background: var(--rule); border-radius: 3px; overflow: hidden; }
+.meter i { display: block; height: 100%; background: var(--accent); transform-origin: left; animation: lvl var(--dur, 2.4s) var(--ease-in-out) infinite; }
+@keyframes lvl { 0%, 100% { transform: scaleX(0.25); } 50% { transform: scaleX(var(--lv, 0.8)); } }
+.chips { grid-column: 2 / -1; display: flex; flex-wrap: wrap; gap: var(--s1) var(--s3); font-size: 0.75rem; color: var(--ink-2); font-family: var(--font-data); }
+.chips b { color: var(--op); font-weight: 600; }
+.chips u { color: var(--dir); text-decoration: none; }
+
+.globals { grid-area: globals; display: flex; flex-wrap: wrap; align-items: end; gap: var(--s4) var(--s6); padding-top: var(--s4); border-top: 1px solid var(--rule); }
+.knob { display: grid; gap: var(--s1); font-size: 0.75rem; color: var(--ink-2); }
+.knob input { width: 120px; accent-color: var(--accent); margin: 0; }
+.knob input:focus-visible { outline: 2px solid var(--focus); outline-offset: 4px; }
+.adv { margin-left: auto; font: inherit; font-size: 0.8125rem; padding: var(--s2) var(--s3); color: var(--ink); background: var(--surface); border: 1px solid var(--rule); border-radius: var(--radius); cursor: pointer; white-space: nowrap; }
+.adv:hover { border-color: var(--ink-2); }
+.adv:active { transform: translateY(1px); }
+.adv[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+@media (max-width: 560px) {
+  .plugin { padding: var(--s4); }
+  .lane { grid-template-columns: auto minmax(0, 1fr); }
+  .lane .meter { grid-column: 1 / -1; }
+  .chips { grid-column: 1 / -1; }
+  .adv { margin-left: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ed-hot span, .meter i { animation: none; }
+  .ed-hot span { opacity: 0.35; }
+  .meter i { transform: scaleX(0.6); }
+  .mod.in { animation-duration: 120ms; animation-delay: 0ms; }
+  @keyframes modin { from { opacity: 0; } }
+}
+
+/* ---------- 1. Ember: ink + heat, dark ---------- */
+.plugin[data-theme="ember"] {
+  --bg: oklch(17% 0.012 50); --surface: oklch(17% 0.012 50); --ink: oklch(90% 0.012 80); --ink-2: oklch(66% 0.02 60);
+  --rule: oklch(34% 0.02 55); --accent: oklch(74% 0.19 48); --cold: oklch(84% 0.07 225); --op: oklch(80% 0.15 75); --dir: oklch(90% 0.012 80);
+  --err: oklch(76% 0.15 25); --focus: oklch(84% 0.07 225); --sel: oklch(40% 0.08 48);
+  --font-text: "Bricolage Grotesque", sans-serif; --font-ui: "Archivo", sans-serif; --font-data: "JetBrains Mono", monospace;
+  --text-size: clamp(1.75rem, 4.4vw, 3.1rem); --text-weight: 600; --text-lh: 1.16; --text-track: -0.02em; --radius: 0px;
+}
+[data-theme="ember"] .ed-layer:not(.ed-hot) { color: oklch(58% 0.015 60); }
+[data-theme="ember"] .ed-layer:not(.ed-hot) .c-op { color: var(--op); }
+[data-theme="ember"] .mods { gap: 0; }
+[data-theme="ember"] .mod { position: relative; padding: 0 var(--s4) 0 0; }
+[data-theme="ember"] .mod-face { border: 0; border-top: 2px solid var(--rule); padding: var(--s2) var(--s4) 0 0; min-width: 96px; background: none; }
+[data-theme="ember"] .mod-face::before { content: ""; position: absolute; top: -3px; left: 0; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+[data-theme="ember"] .mod[data-locked] .mod-face { border-top-color: var(--cold); }
+[data-theme="ember"] .mod[data-locked] .mod-face::before { background: var(--cold); }
+
+/* ---------- 2. Postmark: postal, light ---------- */
+.plugin[data-theme="postmark"] {
+  --bg: oklch(94% 0.022 88); --surface: oklch(97% 0.015 88); --ink: oklch(27% 0.04 262); --ink-2: oklch(44% 0.035 262);
+  --rule: oklch(74% 0.03 80); --accent: oklch(52% 0.2 27); --cold: oklch(42% 0.14 258); --op: oklch(52% 0.2 27); --dir: oklch(42% 0.14 258);
+  --err: oklch(48% 0.2 27); --focus: oklch(42% 0.14 258); --sel: oklch(85% 0.06 258);
+  --font-text: "Courier Prime", monospace; --font-ui: "Archivo", sans-serif; --font-data: "Courier Prime", monospace;
+  --text-size: clamp(1.2rem, 2.6vw, 1.6rem); --text-weight: 400; --text-lh: 1.5; --radius: 0px;
+  border-top: 8px solid transparent;
+  border-image: repeating-linear-gradient(-45deg, var(--accent) 0 14px, var(--bg) 14px 28px, var(--cold) 28px 42px, var(--bg) 42px 56px) 8;
+}
+[data-theme="postmark"] .seed { border: 2px solid var(--cold); color: var(--cold); border-radius: 50%; padding: var(--s3) var(--s4); transform: rotate(-7deg); text-align: center; line-height: 1.2; }
+[data-theme="postmark"] .seed b { display: block; color: var(--cold); }
+[data-theme="postmark"] .mod { padding: 6px; transform: rotate(calc((var(--i) - 1.5) * 0.8deg));
+  background:
+    radial-gradient(circle at 0 0, var(--bg) 2.6px, transparent 3.1px),
+    radial-gradient(circle at 100% 0, var(--bg) 2.6px, transparent 3.1px),
+    radial-gradient(circle at 0 100%, var(--bg) 2.6px, transparent 3.1px),
+    radial-gradient(circle at 100% 100%, var(--bg) 2.6px, transparent 3.1px),
+    var(--surface);
+  background-size: 10px 10px; background-repeat: round; filter: drop-shadow(0 2px 3px oklch(40% 0.04 80 / 0.25)); }
+[data-theme="postmark"] .mod-face { border: 1px solid var(--accent); min-width: 92px; min-height: 64px; align-content: space-between; position: relative; }
+[data-theme="postmark"] .mod:nth-child(even) .mod-face { border-color: var(--cold); }
+[data-theme="postmark"] .mod[data-locked] .mod-face::after { content: ""; position: absolute; inset: -4px; pointer-events: none;
+  background: repeating-linear-gradient(-12deg, transparent 0 7px, oklch(27% 0.04 262 / 0.55) 7px 8.5px); }
+[data-theme="postmark"] .mods { gap: var(--s3); }
+
+/* ---------- 3. Phosphor: terminal ---------- */
+.plugin[data-theme="phosphor"] {
+  --bg: oklch(15% 0.02 150); --surface: oklch(15% 0.02 150); --ink: oklch(86% 0.19 145); --ink-2: oklch(64% 0.13 145);
+  --rule: oklch(34% 0.07 145); --accent: oklch(84% 0.16 82); --cold: oklch(82% 0.09 200); --op: oklch(84% 0.16 82); --dir: oklch(82% 0.09 200);
+  --err: oklch(74% 0.17 30); --focus: oklch(84% 0.16 82); --sel: oklch(36% 0.1 145);
+  --font-text: "IBM Plex Mono", monospace; --font-ui: "IBM Plex Mono", monospace; --font-data: "IBM Plex Mono", monospace;
+  --text-size: clamp(1.05rem, 2.2vw, 1.35rem); --text-weight: 400; --text-lh: 1.5; --radius: 0px;
+}
+[data-theme="phosphor"] .ed { --gut: calc(var(--text-size) * 1.3); padding-left: var(--gut); }
+[data-theme="phosphor"] .ed::before { content: ">"; position: absolute; left: 0; top: 0; font-family: var(--font-text); font-size: var(--text-size); line-height: var(--text-lh); color: var(--ink-2); }
+[data-theme="phosphor"] .ed textarea { left: var(--gut); width: calc(100% - var(--gut)); }
+[data-theme="phosphor"] .ed-hot { left: var(--gut); }
+[data-theme="phosphor"] .mods { gap: 0 var(--s2); align-items: start; }
+[data-theme="phosphor"] .mod { display: flex; align-items: start; gap: var(--s2); }
+[data-theme="phosphor"] .mod::before { content: ">"; color: var(--ink-2); font-size: 0.8125rem; line-height: 1.6; }
+[data-theme="phosphor"] .mod-face { border: 0; padding: 0; background: none; }
+[data-theme="phosphor"] .lock { padding: 0 var(--s1); }
+[data-theme="phosphor"] .lock::before { content: "["; } [data-theme="phosphor"] .lock::after { content: "]"; }
+[data-theme="phosphor"] .meter { border-radius: 0; height: 10px; background: repeating-linear-gradient(90deg, var(--rule) 0 5px, transparent 5px 8px); }
+[data-theme="phosphor"] .meter i { background: repeating-linear-gradient(90deg, var(--ink) 0 5px, var(--bg) 5px 8px); }
+[data-theme="phosphor"] .globals { border-top-style: dashed; }
+
+/* ---------- 4. Proof: printer's proof sheet ---------- */
+.plugin[data-theme="proof"] {
+  --bg: oklch(98.5% 0.003 250); --surface: oklch(98.5% 0.003 250); --ink: oklch(21% 0.01 250); --ink-2: oklch(45% 0.012 250);
+  --rule: oklch(82% 0.006 250); --accent: oklch(56% 0.21 25); --cold: oklch(46% 0.15 255); --op: oklch(52% 0.21 25); --dir: oklch(21% 0.01 250);
+  --err: oklch(50% 0.21 25); --focus: oklch(46% 0.15 255); --sel: oklch(88% 0.05 255);
+  --font-text: "Newsreader", serif; --font-ui: "Archivo", sans-serif; --font-data: "Archivo", sans-serif;
+  --text-size: clamp(1.6rem, 3.6vw, 2.6rem); --text-weight: 400; --text-lh: 1.28; --text-track: -0.01em; --radius: 0px;
+}
+@media (min-width: 800px) {
+  .plugin[data-theme="proof"] { grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); column-gap: var(--s8);
+    grid-template-areas: "head head" "ed lanes" "status lanes" "globals globals"; grid-template-rows: auto auto 1fr auto; }
+  [data-theme="proof"] .lanes { border-left: 1px solid var(--rule); padding-left: var(--s6); }
+}
+[data-theme="proof"] .ed-layer:not(.ed-hot) .c-op { box-shadow: 0 0 0 1.5px var(--op); border-radius: 50%; }
+[data-theme="proof"] .c-dir { text-decoration-color: var(--accent); text-decoration-style: wavy; }
+[data-theme="proof"] .lane { grid-template-columns: auto minmax(0, 1fr); align-items: start; padding-bottom: var(--s3); border-bottom: 1px solid var(--rule); }
+[data-theme="proof"] .lane .meter { grid-column: 2; height: 2px; }
+[data-theme="proof"] .chips { grid-column: 2; font-family: var(--font-text); font-style: italic; font-size: 0.9375rem; color: var(--accent); }
+[data-theme="proof"] .chips b, [data-theme="proof"] .chips u { color: var(--accent); }
+[data-theme="proof"] .mods { display: grid; gap: 0; }
+[data-theme="proof"] .mod-face { border: 0; padding: var(--s1) 0; background: none; }
+[data-theme="proof"] .mod-name { font-weight: 600; letter-spacing: 0.06em; font-size: 0.8125rem; }
+[data-theme="proof"] .lock { font-family: var(--font-text); font-style: italic; font-size: 0.9375rem; }
+[data-theme="proof"] .lock[aria-pressed="true"] { border-color: transparent; text-decoration: underline dotted; text-underline-offset: 0.2em; }
+[data-theme="proof"] .mod[data-locked] .mod-name { text-decoration: underline dotted var(--cold); text-underline-offset: 0.25em; }
+
+/* ---------- 5. Console: hardware strip ---------- */
+.plugin[data-theme="console"] {
+  --bg: oklch(31% 0.008 250); --surface: oklch(24% 0.008 250); --ink: oklch(94% 0.004 250); --ink-2: oklch(76% 0.01 250);
+  --rule: oklch(42% 0.01 250); --accent: oklch(80% 0.16 72); --cold: oklch(82% 0.09 205); --op: oklch(80% 0.16 72); --dir: oklch(82% 0.09 205);
+  --err: oklch(76% 0.15 25); --focus: oklch(82% 0.09 205); --sel: oklch(42% 0.07 72);
+  --font-text: "Archivo", sans-serif; --font-ui: "Archivo", sans-serif; --font-data: "JetBrains Mono", monospace;
+  --text-size: clamp(1.2rem, 2.6vw, 1.7rem); --text-weight: 500; --text-lh: 1.35; --radius: 4px;
+}
+[data-theme="console"] .ed { background: oklch(18% 0.01 250); border-radius: var(--radius); padding: var(--s4); box-shadow: inset 0 2px 6px oklch(10% 0.01 250 / 0.7); }
+[data-theme="console"] .ed textarea, [data-theme="console"] .ed-hot { inset: var(--s4); width: calc(100% - 2 * var(--s4)); height: calc(100% - 2 * var(--s4)); }
+[data-theme="console"] .ed:focus-within { outline-offset: 2px; }
+[data-theme="console"] .lane { background: var(--surface); border-radius: var(--radius); padding: var(--s3); box-shadow: 0 2px 4px oklch(15% 0.01 250 / 0.5); }
+[data-theme="console"] .mod-face { background: var(--bg); border-color: oklch(48% 0.01 250); min-width: 100px; box-shadow: 0 1px 2px oklch(15% 0.01 250 / 0.6); }
+[data-theme="console"] .mod-name::before { content: ""; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); margin-right: var(--s2); vertical-align: 1px; }
+[data-theme="console"] .mod[data-locked] .mod-name::before { background: var(--cold); }
+</style>
+</head>
+<body>
+<div class="shell">
+  <h1>Verbatim: five visual directions</h1>
+  <fieldset class="pick">
+    <legend>Direction</legend>
+    <label><input type="radio" name="t" value="ember" checked><span>1 Ember</span></label>
+    <label><input type="radio" name="t" value="postmark"><span>2 Postmark</span></label>
+    <label><input type="radio" name="t" value="phosphor"><span>3 Phosphor</span></label>
+    <label><input type="radio" name="t" value="proof"><span>4 Proof</span></label>
+    <label><input type="radio" name="t" value="console"><span>5 Console</span></label>
+  </fieldset>
+  <p class="note" id="note"></p>
+
+  <div class="plugin" id="plugin" data-theme="ember">
+    <header class="p-head">
+      <span class="mark">Verbatim</span>
+      <span class="seed" id="seed"></span>
+    </header>
+    <div class="ed">
+      <div class="ed-layer" id="cold" aria-hidden="true"></div>
+      <div class="ed-layer ed-hot" id="hot" aria-hidden="true"></div>
+      <textarea id="txt" spellcheck="false" autocomplete="off" aria-label="Seed text" aria-describedby="status" placeholder="Type anything."></textarea>
+    </div>
+    <p class="status" id="status" role="status"></p>
+    <ol class="lanes" id="lanes" aria-label="Effect chain, one voice per line"></ol>
+    <div class="globals">
+      <label class="knob">Mix <input type="range" min="0" max="100" value="80"></label>
+      <label class="knob">Macro <input type="range" min="0" max="100" value="50"></label>
+      <label class="knob">Output <input type="range" min="0" max="100" value="70"></label>
+      <button class="adv" id="adv" type="button" aria-pressed="false">Advanced</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const FX = { SAT:['drive','tone'], CRUSH:['bits','rate'], FILTER:['cutoff','reso'], DELAY:['time','fdbk'], VERB:['size','damp'], CHORUS:['rate','depth'],
+  PHASER:['rate','fdbk'], TREM:['rate','depth'], WOW:['rate','depth'], FREEZE:['len','mix'], COMB:['pitch','fdbk'], RING:['freq','mix'],
+  PITCH:['semi','mix'], GRAIN:['size','spray'], COMP:['thresh','ratio'], FLANGE:['rate','fdbk'] };
+const DIRS = { dark:'cutoffs down', bright:'cutoffs up', warm:'drive up', cold:'drive down', slow:'rates down', fast:'rates up', wide:'width up',
+  narrow:'width down', long:'tails up', short:'tails down', loud:'level up', soft:'level down', deep:'depth up', thin:'lows down' };
+const OPS = { '!':'heat', '?':'wander', '~':'wobble', '.':'stop', '…':'sustain', ',':'duck', '-':'dry', '>':'feedback', '*':'wide', '/':'split', ':':'follow', '+':'gain', '&':'chain', '"':'band' };
+const LOCK = { ember:['freeze','frozen'], postmark:['hold','held'], phosphor:['lock','locked'], proof:['stet','stet'], console:['hold','held'] };
+const NOTES = {
+  ember: 'Ink and heat. Text is the whole interface: letters sit cold until their voice carries signal, then glow. The chain is a thin line of nodes. Frozen modules turn ice blue.',
+  postmark: 'Postal. Each effect is a stamp, the seed is the postmark, holding an effect cancels the stamp. Warm and tactile; the heaviest to illustrate well.',
+  phosphor: 'Terminal. One typeface, one phosphor colour, the chain printed as a signal path. Cheapest to build and the least warm.',
+  proof: 'Printer\'s proof. Your text is the typeset sheet; punctuation is circled like proof marks and the chain is the margin notes. Holding an effect is "stet": let it stand.',
+  console: 'Hardware strip. Text in a recessed display, each voice a rack row of units with LEDs. Familiar to plugin users; the least distinctive.'
+};
+const $ = id => document.getElementById(id);
+const plugin = $('plugin'), txt = $('txt');
+const esc = s => s.replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+
+function hash32(str) {
+  let h = 2166136261;
+  for (const b of new TextEncoder().encode(str)) { h ^= b; h = Math.imul(h, 16777619); }
+  h ^= h >>> 15; h = Math.imul(h, 0x85ebca6b); h ^= h >>> 13; h = Math.imul(h, 0xc2b2ae35); h ^= h >>> 16;
+  return h >>> 0;
+}
+function rng(a) {
+  return () => { a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+}
+function parseLine(line) {
+  const segs = [], entropy = [], ops = {}, dirs = [], nums = [];
+  for (const m of line.matchAll(/(\.\.\.|…)|(\d+%?)|([\p{L}\p{M}']+)|(\s+)|(.)/gu)) {
+    const [t, ell, num, word, space, other] = m;
+    if (ell) { ops['…'] = (ops['…'] || 0) + 1; segs.push([t, 'c-op']); }
+    else if (num) { nums.push(num); segs.push([t, 'c-num']); }
+    else if (word) { const w = word.toLowerCase(); if (DIRS[w]) { dirs.push(w); segs.push([t, 'c-dir']); } else { entropy.push(w); segs.push([t, '']); } }
+    else if (space) segs.push([t, '']);
+    else if (OPS[other]) { ops[other] = (ops[other] || 0) + 1; segs.push([t, 'c-op']); }
+    else { entropy.push(other); segs.push([t, '']); }
+  }
+  return { segs, entropy: entropy.join(' '), ops, dirs, nums };
+}
+
+const locks = {};   // "lane:slot" -> module
+let prev = {};      // "lane:slot" -> signature, to animate only what changed
+function build(p, li) {
+  const seed = hash32(p.entropy), r = rng(seed);
+  let n = 2 + Math.floor(r() * 4);
+  const pool = Object.keys(FX), mods = [];
+  for (let s = 0; s < 6; s++) {
+    const type = pool.splice(Math.floor(r() * pool.length), 1)[0];
+    const m = { type, vals: FX[type].map(() => Math.round(r() * 100)) };
+    if (locks[li + ':' + s]) { mods[s] = locks[li + ':' + s]; n = Math.max(n, s + 1); }
+    else if (s < n) mods[s] = m;
+  }
+  return { seed, mods: mods.slice(0, n) };
+}
+
+function render() {
+  const theme = plugin.dataset.theme;
+  const lines = txt.value.split('\n');
+  let cold = '', hot = '', lanesHtml = '', li = 0, total = 0, held = 0, extra = false, seeds = [];
+  const next = {};
+  lines.forEach((line, row) => {
+    const live = line.trim() !== '' && li < 4;
+    if (line.trim() !== '' && !live) extra = true;
+    const p = parseLine(line);
+    const heat = Math.min(3, p.ops['!'] || 0);
+    let i = 0, c = '', h = '';
+    for (const [t, cls] of p.segs) {
+      const k = live ? cls : 'c-off';
+      c += k ? `<span class="${k}">${esc(t)}</span>` : esc(t);
+      for (const ch of t) h += `<span class="${live ? '' : 'c-off'}" style="--i:${i++}">${esc(ch)}</span>`;
+    }
+    const dur = (1.8 + (hash32(line) % 20) / 10).toFixed(1) + 's';
+    cold += c + '\n';
+    hot += `<div style="--dur:${dur};--peak:${0.55 + heat * 0.15}">${h || ' '}</div>`;
+    if (!live) return;
+    const lane = build(p, li); seeds.push(lane.seed);
+    let mods = '';
+    lane.mods.forEach((m, s) => {
+      const key = li + ':' + s, sig = m.type + m.vals, locked = !!locks[key];
+      next[key] = sig; total++; if (locked) held++;
+      mods += `<li class="mod${prev[key] !== sig ? ' in' : ''}" style="--i:${s}"${locked ? ' data-locked' : ''}><div class="mod-face">
+        <div class="mod-top"><span class="mod-name">${m.type}</span>
+        <button class="lock" type="button" data-key="${key}" aria-pressed="${locked}" aria-label="${LOCK[theme][0]} ${m.type}">${LOCK[theme][+locked]}</button></div>
+        <dl class="mod-params">${FX[m.type].map((n, j) => `<div><dt>${n}</dt><dd>${m.vals[j]}</dd></div>`).join('')}</dl></div></li>`;
+    });
+    const chips = [
+      ...Object.entries(p.ops).map(([o, n]) => `<span><b>${esc(o)}</b> ${OPS[o]}${n > 1 ? ' x' + n : ''}</span>`),
+      ...p.dirs.map(d => `<span><u>${d}</u> ${DIRS[d]}</span>`),
+      ...p.nums.map(n => `<span><u>${n}</u> ${n.endsWith('%') ? 'voice mix' : 'time base'}</span>`)
+    ].join('');
+    lanesHtml += `<li class="lane" style="--dur:${dur};--lv:${0.6 + heat * 0.13}"><span class="lane-id">${li + 1}</span><ol class="mods">${mods}</ol>
+      <div class="meter"><i></i></div>${chips ? `<div class="chips">${chips}</div>` : ''}</li>`;
+    li++;
+  });
+  prev = next;
+  $('cold').innerHTML = cold + '​'; $('hot').innerHTML = hot;
+  $('lanes').innerHTML = lanesHtml;
+  const all = seeds.length ? hash32(seeds.join(',')).toString(16).padStart(8, '0') : '--------';
+  $('seed').innerHTML = `seed <b>${all}</b> grammar v1`;
+  const st = $('status');
+  st.dataset.kind = extra ? 'error' : '';
+  st.textContent = extra ? 'Only the first four lines make sound. Lines after that are ignored.'
+    : !li ? 'Type anything. The same text always gives the same sound.'
+    : `${li} ${li > 1 ? 'voices' : 'voice'}, ${total} effects${held ? ', ' + held + ' held' : ''}. Each line is its own voice.`;
+}
+
+$('lanes').addEventListener('click', e => {
+  const b = e.target.closest('.lock'); if (!b) return;
+  const key = b.dataset.key;
+  if (locks[key]) delete locks[key];
+  else { const [l, s] = key.split(':'); const lines = txt.value.split('\n').filter(x => x.trim() !== ''); locks[key] = build(parseLine(lines[l]), +l).mods[s]; }
+  render();
+  document.querySelector(`.lock[data-key="${key}"]`)?.focus();
+});
+txt.addEventListener('input', render);
+$('adv').addEventListener('click', e => { const on = plugin.classList.toggle('is-adv'); e.currentTarget.setAttribute('aria-pressed', on); });
+document.querySelectorAll('input[name=t]').forEach(r => r.addEventListener('change', () => setTheme(r.value)));
+function setTheme(t) { plugin.dataset.theme = t; $('note').textContent = NOTES[t]; try { history.replaceState(null, '', '#' + t); } catch {} render(); }
+
+txt.value = 'dark tape, slow echo!\nthe second line is its own voice...';
+const start = location.hash.slice(1);
+if (NOTES[start]) document.querySelector(`input[value=${start}]`).checked = true;
+setTheme(NOTES[start] ? start : 'ember');
+</script>
+</body>
+</html>

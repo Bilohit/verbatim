@@ -1,0 +1,17 @@
+# build output
+build/
+out/
+# portable tools downloaded locally (pluginval, VST3 validator)
+tools/bin/
+# web UI
+gui/node_modules/
+gui/dist/
+# executor workspace
+.superpowers/
+# local agent / editor configuration
+.codex/
+.cursor/
+.impeccable/
+.vs/
+.vscode/
+FABLE_PROMPT.md

@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Verbatim paper machines</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400..700&family=Courier+Prime:wght@400;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<!-- Prototype only: icons from CDN. Product bundles @phosphor-icons/react (MIT) so the plugin works offline. -->
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
+<style>
+/* Hallmark · component: plugin editor mock · genre: editorial · theme: custom x2 (typewriter, fax)
+ * Throwaway prototype. Grammar in the script is illustrative, not the spec (see 04-seed-grammar.md).
+ * Production motion lives in gui/src via framer-motion (animotion); here it is CSS, transform and opacity only. */
+:root {
+  --shell-bg: oklch(15% 0.006 260); --shell-ink: oklch(93% 0.005 260); --shell-ink-2: oklch(72% 0.01 260);
+  --shell-rule: oklch(32% 0.01 260); --shell-accent: oklch(80% 0.13 85);
+  --font-shell: "Archivo", system-ui, sans-serif;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1); --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s6: 24px; --s8: 32px;
+}
+*, *::before, *::after { box-sizing: border-box; }
+html, body { overflow-x: clip; }
+body { margin: 0; background: var(--shell-bg); color: var(--shell-ink); font-family: var(--font-shell); line-height: 1.5; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.shell { max-width: 1000px; margin: 0 auto; padding: var(--s6) var(--s4) var(--s8); }
+.pick { border: 0; padding: 0; margin: 0 0 var(--s4); display: flex; flex-wrap: wrap; gap: var(--s2); }
+.pick label { cursor: pointer; }
+.pick input { position: absolute; opacity: 0; }
+.pick span { display: block; padding: var(--s2) var(--s3); border: 1px solid var(--shell-rule); border-radius: 6px; color: var(--shell-ink-2); white-space: nowrap; }
+.pick label:hover span { color: var(--shell-ink); border-color: var(--shell-ink-2); }
+.pick input:checked + span { color: var(--shell-bg); background: var(--shell-accent); border-color: var(--shell-accent); font-weight: 600; }
+.pick input:focus-visible + span { outline: 2px solid var(--shell-ink); outline-offset: 2px; }
+
+/* ---------- machine: shared structure ---------- */
+.machine {
+  background: var(--body); color: var(--body-ink); font-family: var(--font-ui);
+  display: grid; gap: var(--s6); padding: var(--s6); grid-template-columns: minmax(0, 1fr); align-content: start;
+  min-height: 580px; border-radius: var(--body-radius); overflow: auto;
+}
+@media (min-width: 800px) { .machine { resize: both; min-width: 620px; max-width: 100%; } }
+.top { display: flex; align-items: center; justify-content: space-between; gap: var(--s4); }
+.mark { font-weight: 700; letter-spacing: 0.04em; }
+.top-r { display: flex; align-items: center; gap: var(--s4); }
+.out { display: grid; gap: 3px; width: 64px; background: repeating-linear-gradient(var(--hover) 0 4px, transparent 4px 7px); }
+.out i { display: block; height: 4px; background: var(--meter); transform-origin: left; animation: lvl 2.3s var(--ease-in-out) infinite; }
+.out i + i { animation-duration: 2.9s; }
+@keyframes lvl { 0%, 100% { transform: scaleX(0.2); } 50% { transform: scaleX(0.85); } }
+.icon-btn { display: grid; place-items: center; width: 40px; height: 40px; font-size: 22px; color: var(--body-ink); background: none; border: 1.5px solid currentColor; border-radius: var(--btn-radius); cursor: pointer; }
+.icon-btn:hover { background: var(--hover); }
+.icon-btn:active { transform: translateY(1px); }
+.icon-btn[aria-pressed="true"] { background: var(--body-ink); color: var(--body); }
+:is(.icon-btn, .key, .rm):focus-visible, .knob input:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
+
+.paper { position: relative; background: var(--paper); color: var(--ink); padding: var(--s8) var(--s8) calc(var(--s8) + var(--s2)); }
+.paper ::selection { background: var(--sel); }
+.ed { position: relative; min-width: 0; margin-right: 96px; }
+.ed-layer, .ed textarea { font-family: var(--font-text); font-size: var(--text-size); font-weight: 400; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; margin: 0; padding: 0; border: 0; }
+.ed-layer { min-height: calc(var(--text-size) * 1.5 * 3); color: var(--ink-faint); }
+.ed-hot { position: absolute; inset: 0; pointer-events: none; color: var(--ink); }
+.ed textarea { position: absolute; inset: 0; width: 100%; height: 100%; resize: none; overflow: hidden; background: transparent; color: transparent; caret-color: var(--op); outline: none; }
+.c-dir { text-decoration: underline; text-decoration-thickness: 1.5px; text-underline-offset: 0.2em; }
+.c-off { text-decoration: line-through; }
+.ed-hot span { opacity: 0; animation: ink var(--dur, 2.4s) var(--ease-in-out) infinite; animation-delay: calc(var(--i) * -80ms); }
+.ed-hot .c-off, .ed-hot .c-op { animation: none; opacity: 0; }
+@keyframes ink { 0%, 100% { opacity: 0.05; } 50% { opacity: var(--peak, 0.8); } }
+.seed { position: absolute; top: var(--s4); right: var(--s4); font-family: "IBM Plex Mono", monospace; font-size: 0.75rem; font-variant-numeric: tabular-nums; }
+
+.scale { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s4) var(--s8); }
+.knob { display: flex; align-items: center; gap: var(--s2); font-size: 20px; }
+.knob input { -webkit-appearance: none; appearance: none; width: 140px; height: 20px; margin: 0; background: var(--track); cursor: pointer; }
+.knob input::-webkit-slider-thumb { -webkit-appearance: none; width: var(--thumb-w); height: 20px; background: var(--thumb); border: 0; border-radius: var(--thumb-r); }
+.knob input::-moz-range-thumb { width: var(--thumb-w); height: 20px; background: var(--thumb); border: 0; border-radius: var(--thumb-r); }
+
+.lanes { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s4); }
+.lane { padding-left: calc(var(--row) * var(--stagger)); }
+.mods { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--s3) var(--s4); }
+.mod { position: relative; display: grid; gap: var(--s2); justify-items: center; }
+.mod.in { animation: keyin 240ms var(--ease-out) both; animation-delay: calc(var(--i) * 40ms); }
+@keyframes keyin { from { opacity: 0; transform: translateY(-8px); } }
+.key { display: grid; place-items: center; font-size: 22px; cursor: pointer; transition: transform 90ms var(--ease-out); }
+.bars { display: none; gap: 3px; width: 100%; }
+.bars i { display: block; height: 3px; background: var(--body-ink); transform-origin: left; transform: scaleX(var(--v)); }
+.rm { display: none; position: absolute; top: -8px; right: -8px; width: 22px; height: 22px; place-items: center; font-size: 12px; color: var(--paper); background: var(--ink); border: 0; border-radius: 50%; cursor: pointer; }
+.rm:hover { background: var(--op); }
+.add { display: none; }
+.machine.is-adv :is(.bars, .rm, .add) { display: grid; }
+.key.ghost { background: none; box-shadow: none; border: 1.5px dashed var(--body-ink); color: var(--body-ink); }
+.key.ghost:hover { background: var(--hover); border-style: solid; }
+
+@media (max-width: 560px) {
+  .machine { padding: var(--s4); gap: var(--s4); }
+  .paper { padding: var(--s6) var(--s4) var(--s8); }
+  .ed { margin-right: 0; margin-top: 72px; }
+  .lane { padding-left: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ed-hot span, .out i { animation: none; }
+  .ed-hot span { opacity: 0.6; }
+  .out i { transform: scaleX(0.6); }
+  .mod.in { animation-duration: 120ms; animation-delay: 0ms; }
+  @keyframes keyin { from { opacity: 0; } }
+}
+
+/* ---------- Typewriter: mint enamel body, two-colour ribbon, latching keys ---------- */
+.machine[data-theme="typewriter"] {
+  --body: oklch(76% 0.05 168); --body-ink: oklch(24% 0.03 168); --hover: oklch(70% 0.05 168); --body-radius: 18px; --btn-radius: 50%;
+  --paper: oklch(97.5% 0.008 95); --ink: oklch(22% 0.012 265); --ink-faint: oklch(52% 0.012 265); --op: oklch(50% 0.2 27);
+  --sel: oklch(88% 0.05 27); --focus: oklch(24% 0.03 168); --meter: oklch(24% 0.03 168);
+  --key: oklch(27% 0.02 168); --key-ink: oklch(95% 0.02 95); --key-rim: oklch(90% 0.012 168); --key-drop: oklch(45% 0.05 168);
+  --track: repeating-linear-gradient(90deg, var(--body-ink) 0 1px, transparent 1px 10px) left bottom / 100% 9px no-repeat;
+  --thumb: oklch(50% 0.2 27); --thumb-w: 5px; --thumb-r: 1px;
+  --font-text: "Courier Prime", monospace; --font-ui: "Archivo", sans-serif; --text-size: clamp(1.2rem, 2.7vw, 1.7rem); --stagger: 26px;
+}
+[data-theme="typewriter"] .paper { margin: 0 var(--s6); box-shadow: 0 -1px 0 oklch(60% 0.03 168), 0 10px 18px -8px oklch(35% 0.05 168 / 0.6); }
+[data-theme="typewriter"] .paper::after { content: ""; position: absolute; left: calc(-1 * var(--s6)); right: calc(-1 * var(--s6)); bottom: -9px; height: 18px; border-radius: 9px; background: oklch(22% 0.01 168); box-shadow: 0 3px 5px oklch(35% 0.05 168 / 0.5); }
+[data-theme="typewriter"] .ed-layer:not(.ed-hot) .c-op { color: var(--op); font-weight: 700; }
+[data-theme="typewriter"] .seed { width: 76px; height: 76px; display: grid; place-items: center; text-align: center; color: var(--op); border: 1.5px solid currentColor; border-radius: 50%; outline: 1.5px solid currentColor; outline-offset: -6px; transform: rotate(-9deg); }
+[data-theme="typewriter"] .key { width: 50px; height: 50px; border-radius: 50%; background: var(--key); color: var(--key-ink); border: 2.5px solid var(--key-rim); box-shadow: 0 4px 0 var(--key-drop), 0 7px 8px oklch(35% 0.05 168 / 0.45); }
+[data-theme="typewriter"] .key:hover { border-color: oklch(99% 0.005 168); }
+[data-theme="typewriter"] .key:active { transform: translateY(4px); box-shadow: 0 1px 2px oklch(35% 0.05 168 / 0.45); }
+[data-theme="typewriter"] .key[aria-pressed="true"] { transform: translateY(4px); border-color: var(--op); box-shadow: 0 1px 2px oklch(35% 0.05 168 / 0.45); }
+[data-theme="typewriter"] .key.ghost { background: none; color: var(--body-ink); border: 1.5px dashed var(--body-ink); box-shadow: none; }
+
+/* ---------- Fax: grey plastic body, thermal paper, rubber buttons with hold lamp ---------- */
+.machine[data-theme="fax"] {
+  --body: oklch(87% 0.006 250); --body-ink: oklch(28% 0.012 250); --hover: oklch(81% 0.006 250); --body-radius: 10px; --btn-radius: 6px;
+  --paper: oklch(98.5% 0.004 230); --ink: oklch(24% 0.012 250); --ink-faint: oklch(56% 0.012 250); --op: oklch(24% 0.012 250);
+  --sel: oklch(86% 0.04 150); --focus: oklch(28% 0.012 250); --meter: oklch(52% 0.17 150);
+  --key: oklch(40% 0.01 250); --key-ink: oklch(97% 0.004 250); --lamp-off: oklch(30% 0.02 150); --lamp-on: oklch(80% 0.21 148);
+  --track: linear-gradient(var(--body-ink), var(--body-ink)) left center / 100% 2px no-repeat;
+  --thumb: oklch(40% 0.01 250); --thumb-w: 12px; --thumb-r: 3px;
+  --font-text: "IBM Plex Mono", monospace; --font-ui: "Archivo", sans-serif; --text-size: clamp(1.05rem, 2.3vw, 1.4rem); --stagger: 0px;
+}
+[data-theme="fax"] .paper { padding-top: calc(var(--s8) + var(--s6)); filter: drop-shadow(0 6px 6px oklch(40% 0.01 250 / 0.3));
+  -webkit-mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom / 14px 100%;
+  mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom / 14px 100%; }
+[data-theme="fax"] .ed-layer:not(.ed-hot) .c-op { background: var(--ink); color: var(--paper); }
+[data-theme="fax"] .seed { left: var(--s8); right: var(--s8); top: var(--s4); padding-bottom: var(--s2); border-bottom: 1px dashed var(--ink-faint); color: var(--ink-faint); letter-spacing: 0.08em; }
+[data-theme="fax"] .key { width: 58px; height: 44px; border-radius: 7px; background: var(--key); color: var(--key-ink); border: 0; box-shadow: 0 2px 0 oklch(28% 0.01 250), 0 4px 6px oklch(40% 0.01 250 / 0.35); position: relative; }
+[data-theme="fax"] .key::after { content: ""; position: absolute; top: 5px; left: 5px; width: 6px; height: 6px; border-radius: 50%; background: var(--lamp-off); }
+[data-theme="fax"] .key:hover { background: oklch(46% 0.01 250); }
+[data-theme="fax"] .key:active { transform: translateY(2px); }
+[data-theme="fax"] .key[aria-pressed="true"]::after { background: var(--lamp-on); }
+[data-theme="fax"] .key.ghost { background: none; box-shadow: none; border: 1.5px dashed var(--body-ink); color: var(--body-ink); }
+[data-theme="fax"] .key.ghost::after { display: none; }
+</style>
+</head>
+<body>
+<div class="shell">
+  <fieldset class="pick">
+    <legend class="sr">Machine</legend>
+    <label><input type="radio" name="t" value="typewriter" checked><span>Typewriter</span></label>
+    <label><input type="radio" name="t" value="fax"><span>Fax</span></label>
+  </fieldset>
+
+  <div class="machine" id="machine" data-theme="typewriter">
+    <header class="top">
+      <span class="mark">Verbatim</span>
+      <div class="top-r">
+        <div class="out" role="img" aria-label="Output level"><i></i><i></i></div>
+        <button class="icon-btn" id="adv" type="button" aria-pressed="false" aria-label="Advanced: edit, add and remove effects" title="Advanced"><i class="ph ph-sliders-horizontal" aria-hidden="true"></i></button>
+      </div>
+    </header>
+    <div class="paper">
+      <span class="seed" id="seed" title="Seed"></span>
+      <div class="ed">
+        <div class="ed-layer" id="cold" aria-hidden="true"></div>
+        <div class="ed-layer ed-hot" id="hot" aria-hidden="true"></div>
+        <textarea id="txt" spellcheck="false" autocomplete="off" aria-label="Seed text" autofocus></textarea>
+      </div>
+    </div>
+    <div class="scale">
+      <label class="knob" title="Mix"><i class="ph ph-drop-half" aria-hidden="true"></i><span class="sr">Mix</span><input type="range" min="0" max="100" value="80"></label>
+      <label class="knob" title="Macro"><i class="ph ph-magic-wand" aria-hidden="true"></i><span class="sr">Macro</span><input type="range" min="0" max="100" value="50"></label>
+      <label class="knob" title="Output"><i class="ph ph-speaker-high" aria-hidden="true"></i><span class="sr">Output</span><input type="range" min="0" max="100" value="70"></label>
+    </div>
+    <ol class="lanes" id="lanes" aria-label="Voices, one per line of text"></ol>
+    <p class="sr" id="status" role="status"></p>
+  </div>
+</div>
+
+<script>
+const FX = { SAT:['Saturation','fire'], CRUSH:['Bitcrush','stairs'], FILTER:['Filter','funnel'], DELAY:['Delay','timer'], VERB:['Reverb','waves'], CHORUS:['Chorus','users-three'],
+  PHASER:['Phaser','spiral'], TREM:['Tremolo','wave-sine'], WOW:['Tape wow','vinyl-record'], FREEZE:['Freeze','snowflake'], COMB:['Comb','hash'], RING:['Ring mod','bell-simple'],
+  PITCH:['Pitch','arrows-vertical'], GRAIN:['Granular','dots-nine'], COMP:['Compressor','arrows-in-line-vertical'], FLANGE:['Flanger','airplane-tilt'] };
+const DIRS = new Set(['dark','bright','warm','cold','slow','fast','wide','narrow','long','short','loud','soft','deep','thin']);
+const OPS = new Set(['!','?','~','.',',','-','>','*','/',':','+','&','"']);
+const $ = id => document.getElementById(id);
+const machine = $('machine'), txt = $('txt');
+const esc = s => s.replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+
+function hash32(str) {
+  let h = 2166136261;
+  for (const b of new TextEncoder().encode(str)) { h ^= b; h = Math.imul(h, 16777619); }
+  h ^= h >>> 15; h = Math.imul(h, 0x85ebca6b); h ^= h >>> 13; h = Math.imul(h, 0xc2b2ae35); h ^= h >>> 16;
+  return h >>> 0;
+}
+function rng(a) {
+  return () => { a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+}
+function parseLine(line) {
+  const segs = [], entropy = []; let heat = 0;
+  for (const m of line.matchAll(/(\.\.\.|…)|(\d+%?)|([\p{L}\p{M}']+)|(\s+)|(.)/gu)) {
+    const [t, ell, num, word, space, other] = m;
+    if (ell) segs.push([t, 'c-op']);
+    else if (num) segs.push([t, 'c-dir']);
+    else if (word) { const w = word.toLowerCase(); if (DIRS.has(w)) segs.push([t, 'c-dir']); else { entropy.push(w); segs.push([t, '']); } }
+    else if (space) segs.push([t, '']);
+    else if (OPS.has(other)) { if (other === '!') heat++; segs.push([t, 'c-op']); }
+    else { entropy.push(other); segs.push([t, '']); }
+  }
+  return { segs, entropy: entropy.join(' '), heat: Math.min(3, heat) };
+}
+
+const locks = {}, removed = new Set(), added = {};
+let prev = {};
+function build(p, li) {
+  const r = rng(hash32(p.entropy)), pool = Object.keys(FX), mods = [];
+  let n = 2 + Math.floor(r() * 4);
+  for (let s = 0; s < 6; s++) {
+    const type = pool.splice(Math.floor(r() * pool.length), 1)[0];
+    const m = { type, vals: [Math.round(r() * 100), Math.round(r() * 100)] };
+    if (locks[li + ':' + s]) { mods[s] = locks[li + ':' + s]; n = Math.max(n, s + 1); }
+    else if (s < n) mods[s] = m;
+  }
+  return mods.slice(0, n);
+}
+const liveLines = () => txt.value.split('\n').filter(x => x.trim() !== '');
+
+function render() {
+  let cold = '', hot = '', rows = '', li = 0, total = 0, held = 0, extra = false;
+  const next = {}, seeds = [];
+  for (const line of txt.value.split('\n')) {
+    const live = line.trim() !== '' && li < 4;
+    if (line.trim() !== '' && !live) extra = true;
+    const p = parseLine(line);
+    let i = 0, c = '', h = '';
+    for (const [t, cls] of p.segs) {
+      const k = live ? cls : 'c-off';
+      c += k ? `<span class="${k}">${esc(t)}</span>` : esc(t);
+      for (const ch of t) h += `<span class="${k}" style="--i:${i++}">${esc(ch)}</span>`;
+    }
+    cold += c + '\n';
+    hot += `<div style="--dur:${(1.8 + (hash32(line) % 20) / 10).toFixed(1)}s;--peak:${0.7 + p.heat * 0.1}">${h || ' '}</div>`;
+    if (!live) continue;
+    seeds.push(hash32(p.entropy));
+    const mods = build(p, li).map((m, s) => ({ m, key: li + ':' + s, held: !!locks[li + ':' + s] })).filter(x => !removed.has(x.key));
+    (added[li] || []).forEach((m, j) => mods.push({ m, key: li + ':a' + j, held: true }));
+    rows += `<li class="lane" style="--row:${li}"><ol class="mods" aria-label="Voice ${li + 1}">` + mods.map(({ m, key, held: on }, s) => {
+      const [name, icon] = FX[m.type], sig = m.type + m.vals;
+      next[key] = sig; total++; if (on) held++;
+      return `<li class="mod${prev[key] !== sig ? ' in' : ''}" style="--i:${s}">
+        <button class="key" type="button" data-key="${key}" aria-pressed="${on}" aria-label="${name}, hold" title="${name}"><i class="ph ph-${icon}" aria-hidden="true"></i></button>
+        <div class="bars" aria-hidden="true">${m.vals.map(v => `<i style="--v:${v / 100}"></i>`).join('')}</div>
+        <button class="rm" type="button" data-rm="${key}" aria-label="Remove ${name}"><i class="ph ph-x" aria-hidden="true"></i></button></li>`;
+    }).join('') + `<li class="mod add"><button class="key ghost" type="button" data-add="${li}" aria-label="Add effect to voice ${li + 1}" title="Add effect"><i class="ph ph-plus" aria-hidden="true"></i></button></li></ol></li>`;
+    li++;
+  }
+  prev = next;
+  $('cold').innerHTML = cold + '​'; $('hot').innerHTML = hot; $('lanes').innerHTML = rows;
+  $('seed').textContent = seeds.length ? hash32(seeds.join(',')).toString(16).padStart(8, '0') : '';
+  $('seed').hidden = !seeds.length;
+  $('status').textContent = extra ? 'Only the first four lines make sound.' : li ? `${li} voices, ${total} effects, ${held} held.` : '';
+}
+
+$('lanes').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  const { key, rm, add } = b.dataset;
+  let focus = null;
+  if (key && !key.includes('a')) {
+    if (locks[key]) delete locks[key];
+    else { const [l, s] = key.split(':'); locks[key] = build(parseLine(liveLines()[l]), +l)[s]; }
+    focus = `[data-key="${key}"]`;
+  } else if (rm) {
+    const [l, s] = rm.split(':');
+    if (s[0] === 'a') added[l].splice(+s.slice(1), 1); else { removed.add(rm); delete locks[rm]; }
+    focus = `[data-add="${l}"]`;
+  } else if (add) {
+    const types = Object.keys(FX), type = types[Math.floor(Math.random() * types.length)];
+    (added[add] ||= []).push({ type, vals: [50, 50] });
+    focus = `[data-add="${add}"]`;
+  }
+  render();
+  if (focus) document.querySelector(focus)?.focus();
+});
+txt.addEventListener('input', render);
+$('adv').addEventListener('click', e => e.currentTarget.setAttribute('aria-pressed', machine.classList.toggle('is-adv')));
+document.querySelectorAll('input[name=t]').forEach(r => r.addEventListener('change', () => setTheme(r.value)));
+function setTheme(t) { machine.dataset.theme = t; try { history.replaceState(null, '', '#' + t); } catch {} }
+
+txt.value = 'dark tape, slow echo!\nthe second line is its own voice...';
+const params = location.hash.slice(1).split(',');
+if (params[0] === 'fax') { document.querySelector('input[value=fax]').checked = true; setTheme('fax'); }
+if (params.includes('demo')) { locks['0:1'] = build(parseLine(liveLines()[0]), 0)[1]; machine.classList.add('is-adv'); $('adv').setAttribute('aria-pressed', 'true'); }
+render();
+</script>
+</body>
+</html>
