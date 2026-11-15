@@ -30,6 +30,7 @@ public:
 
     void setMix (float mix01) { mixTarget.store (mix01); }
     void setOutputDb (float db) { outputDbTarget.store (db); }
+    void setBypass (bool b) { bypassTarget.store (b ? 1.0f : 0.0f); } // ramps to the delayed dry signal
 
     int latencySamples() const { return lFixed; }
     bool swapInProgress() const { return fading.load(); }
@@ -63,8 +64,9 @@ private:
 
     std::vector<float> inL, inR, dryL, dryR, outA_L, outA_R, outB_L, outB_R, mixRamp, gainRamp, dryBufL, dryBufR;
     int dryPos = 0;
-    std::atomic<float> mixTarget { 1.0f }, outputDbTarget { 0.0f };
-    float mixCurrent = 1.0f, gainCurrent = 1.0f;
+    std::atomic<float> mixTarget { 1.0f }, outputDbTarget { 0.0f }, bypassTarget { 0.0f };
+    float mixCurrent = 1.0f, gainCurrent = 1.0f, bypassCurrent = 0.0f;
+    std::vector<float> bypassRamp;
     std::atomic<int> nanTotal { 0 };
 };
 } // namespace vbdsp

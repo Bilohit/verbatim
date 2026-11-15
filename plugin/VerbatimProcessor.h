@@ -2,19 +2,26 @@
 
 #include <juce_audio_processors/juce_audio_processors.h>
 
-// Verbatim audio processor. M0: stereo pass-through only.
+#include "dsp/Engine.h"
+
+#include <mutex>
+#include <string>
+
+// Verbatim audio processor: host params, state, and the text -> chain path (docs/02-spec.md).
 class VerbatimProcessor final : public juce::AudioProcessor
 {
 public:
     VerbatimProcessor();
+    ~VerbatimProcessor() override;
 
     void prepareToPlay (double sampleRate, int maxBlock) override;
     void releaseResources() override {}
+    void reset() override;
     bool isBusesLayoutSupported (const BusesLayout&) const override;
     void processBlock (juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
 
-    juce::AudioProcessorEditor* createEditor() override { return nullptr; }
-    bool hasEditor() const override { return false; }
+    juce::AudioProcessorEditor* createEditor() override;
+    bool hasEditor() const override { return true; }
 
     const juce::String getName() const override { return JucePlugin_Name; }
     bool acceptsMidi() const override { return false; }
@@ -27,9 +34,34 @@ public:
     const juce::String getProgramName (int) override { return {}; }
     void changeProgramName (int, const juce::String&) override {}
 
-    void getStateInformation (juce::MemoryBlock&) override {}
-    void setStateInformation (const void*, int) override {}
+    void getStateInformation (juce::MemoryBlock&) override;
+    void setStateInformation (const void*, int) override;
+
+    juce::AudioProcessorParameter* getBypassParameter() const override { return bypass; }
+
+    // Message thread: user typed. Regenerates the chain and marks the project dirty.
+    void setText (const std::string& text);
+    std::string getText() const;
+    bool isStateError() const;
+
+    juce::AudioProcessorValueTreeState params;
 
 private:
+    void applyText (const std::string& text); // builds the chain synchronously
+
+    vbdsp::Engine engine;
+    juce::AudioParameterFloat* mix = nullptr;
+    juce::AudioParameterFloat* macro = nullptr;
+    juce::AudioParameterFloat* output = nullptr;
+    juce::AudioParameterBool* bypass = nullptr;
+
+    mutable std::mutex stateMutex; // non-audio threads only
+    std::string text;
+    bool stateError = false;
+    std::string unloadableBlob; // kept verbatim while in state E3
+
+    juce::AudioBuffer<float> scratch;
+    int maxBlock = 0;
+
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (VerbatimProcessor)
 };

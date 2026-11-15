@@ -58,6 +58,8 @@ juce_add_plugin(Verbatim
 
 target_sources(Verbatim PRIVATE
     plugin/VerbatimProcessor.cpp
+    plugin/State.cpp
+    plugin/VerbatimEditor.cpp
     ${VERBATIM_DSP_SOURCES})
 target_include_directories(Verbatim PRIVATE ${PROJECT_SOURCE_DIR})
 

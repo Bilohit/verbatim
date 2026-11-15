@@ -37,3 +37,13 @@ if(VERBATIM_BUILD_DSP)
         Catch2::Catch2WithMain)
     catch_discover_tests(verbatim_dsp_tests)
 endif()
+
+if(VERBATIM_BUILD_PLUGIN)
+    # Links the plugin's shared-code target, which holds the processor and its JUCE modules.
+    add_executable(verbatim_plugin_tests plugin/state.test.cpp)
+    target_include_directories(verbatim_plugin_tests PRIVATE ${PROJECT_SOURCE_DIR} ${PROJECT_SOURCE_DIR}/dsp
+        $<TARGET_PROPERTY:Verbatim,INCLUDE_DIRECTORIES>)
+    target_compile_definitions(verbatim_plugin_tests PRIVATE $<TARGET_PROPERTY:Verbatim,COMPILE_DEFINITIONS>)
+    target_link_libraries(verbatim_plugin_tests PRIVATE Verbatim Catch2::Catch2WithMain)
+    catch_discover_tests(verbatim_plugin_tests)
+endif()

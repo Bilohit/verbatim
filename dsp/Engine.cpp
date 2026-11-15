@@ -86,7 +86,7 @@ void Engine::prepare (double sr, int block)
     lFixed = 8 * satLatencySamples();
 
     const auto m = static_cast<std::size_t> (block);
-    for (auto* v : { &inL, &inR, &dryL, &dryR, &outA_L, &outA_R, &outB_L, &outB_R, &mixRamp, &gainRamp })
+    for (auto* v : { &inL, &inR, &dryL, &dryR, &outA_L, &outA_R, &outB_L, &outB_R, &mixRamp, &gainRamp, &bypassRamp })
         v->assign (m, 0.0f);
     dryBufL.assign (static_cast<std::size_t> (std::max (lFixed, 1)), 0.0f);
     dryBufR.assign (static_cast<std::size_t> (std::max (lFixed, 1)), 0.0f);
@@ -103,6 +103,7 @@ void Engine::prepare (double sr, int block)
 
     mixCurrent = mixTarget.load();
     gainCurrent = dbToGain (outputDbTarget.load());
+    bypassCurrent = bypassTarget.load();
 }
 
 void Engine::setSpec (const vb::ChainSpec& spec)
@@ -139,6 +140,7 @@ void Engine::reset()
     dryPos = 0;
     mixCurrent = mixTarget.load();
     gainCurrent = dbToGain (outputDbTarget.load());
+    bypassCurrent = bypassTarget.load();
 }
 
 void Engine::process (float* L, float* R, int n) // audio-thread
@@ -178,14 +180,17 @@ void Engine::process (float* L, float* R, int n) // audio-thread
     const float mixT = mixTarget.load (std::memory_order_relaxed);
     const float gainT = dbToGain (outputDbTarget.load (std::memory_order_relaxed));
     const float steps = static_cast<float> (0.02 * sampleRate);
-    const float mixStep = (mixT - mixCurrent) / steps, gainStep = (gainT - gainCurrent) / steps;
+    const float byT = bypassTarget.load (std::memory_order_relaxed);
+    const float mixStep = (mixT - mixCurrent) / steps, gainStep = (gainT - gainCurrent) / steps, byStep = (byT - bypassCurrent) / steps;
     for (int i = 0; i < n; ++i)
     {
         const auto k = static_cast<std::size_t> (i);
         mixCurrent = std::abs (mixT - mixCurrent) <= std::abs (mixStep) ? mixT : mixCurrent + mixStep;
         gainCurrent = std::abs (gainT - gainCurrent) <= std::abs (gainStep) ? gainT : gainCurrent + gainStep;
+        bypassCurrent = std::abs (byT - bypassCurrent) <= std::abs (byStep) ? byT : bypassCurrent + byStep;
         mixRamp[k] = mixCurrent;
         gainRamp[k] = gainCurrent;
+        bypassRamp[k] = bypassCurrent;
     }
 
     int nans = active->render (inL.data(), inR.data(), dryL.data(), dryR.data(), mixRamp.data(), outA_L.data(), outA_R.data(), n);
@@ -221,8 +226,9 @@ void Engine::process (float* L, float* R, int n) // audio-thread
         const auto k = static_cast<std::size_t> (i);
         const float l = outA_L[k] * gainRamp[k], r = outA_R[k] * gainRamp[k];
         clipped = clipped || std::abs (l) > 0.7079f || std::abs (r) > 0.7079f;
-        L[i] = safetyClip (l);
-        R[i] = safetyClip (r);
+        const float b = bypassRamp[k];
+        L[i] = b == 0.0f ? safetyClip (l) : safetyClip (l) * (1.0f - b) + dryL[k] * b;
+        R[i] = b == 0.0f ? safetyClip (r) : safetyClip (r) * (1.0f - b) + dryR[k] * b;
         pkL = std::fmax (pkL, std::abs (L[i]));
         pkR = std::fmax (pkR, std::abs (R[i]));
     }
