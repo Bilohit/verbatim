@@ -7,7 +7,8 @@ FetchContent_MakeAvailable(Catch2)
 include(Catch)
 
 add_executable(verbatim_core_tests
-    core/primitives.test.cpp)
+    core/primitives.test.cpp
+    core/parse.test.cpp)
 target_link_libraries(verbatim_core_tests PRIVATE verbatim_core Catch2::Catch2WithMain)
 catch_discover_tests(verbatim_core_tests)
 
