@@ -107,7 +107,7 @@ TEST_CASE ("D4 effects at max feedback inside lane feedback 3: decay, pre-clip p
 {
     // Feedback param index per effect (catalog): DELAY p1, PHASER p3, FLANGE p3. Extended by T17/T18.
     struct Case { std::uint8_t type; int fbParam; };
-    for (const auto c : { Case { vb::DELAY, 1 }, Case { vb::PHASER, 3 }, Case { vb::FLANGE, 3 }, Case { vb::COMB, 1 } })
+    for (const auto c : { Case { vb::DELAY, 1 }, Case { vb::PHASER, 3 }, Case { vb::FLANGE, 3 }, Case { vb::COMB, 1 }, Case { vb::PITCH, 3 } })
     {
         INFO ("type " << vb::catalog[c.type].name);
         vb::ModuleSpec m;

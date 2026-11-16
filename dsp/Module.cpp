@@ -8,6 +8,7 @@
 #include "fx/Delay.h"
 #include "fx/Filter.h"
 #include "fx/Phaser.h"
+#include "fx/Pitch.h"
 #include "fx/Sat.h"
 #include "fx/Trem.h"
 #include "fx/Verb.h"
@@ -44,6 +45,7 @@ std::unique_ptr<Module> makeModule (const vb::ModuleSpec& spec, std::uint64_t la
         case vb::RING:   return std::make_unique<Ring> (spec);
         case vb::COMB:   return std::make_unique<Comb> (spec);
         case vb::FREEZE: return std::make_unique<Freeze> (spec);
+        case vb::PITCH:  return std::make_unique<Pitch> (spec);
         default:        return std::make_unique<PassThrough>();
     }
 }

@@ -29,7 +29,7 @@ const std::vector<Fx> implemented = {
     { vb::CHORUS, 1.0 }, { vb::PHASER, 2.0 }, { vb::FLANGE, 2.0 },
     { vb::VERB, 6.0 }, { vb::COMP, 1.0 },
     { vb::TREM, 1.0 }, { vb::WOW, 1.0 }, { vb::RING, 1.0 },
-    { vb::COMB, 2.0 }, { vb::FREEZE, 3.0 },
+    { vb::COMB, 2.0 }, { vb::FREEZE, 3.0 }, { vb::PITCH, 2.0 },
 };
 
 vb::ModuleSpec mid (std::uint8_t type)
@@ -150,4 +150,62 @@ TEST_CASE ("Every implemented effect is active: full-mix output differs from dry
             diff += (static_cast<double> (L[i]) - in[i - d]) * (static_cast<double> (L[i]) - in[i - d]);
         CHECK (toDb (std::sqrt (diff / static_cast<double> (L.size() - d))) > -40.0);
     }
+}
+
+TEST_CASE ("D7 PITCH reports zero latency and keeps the lane aligned with dry", "[D7]")
+{
+    auto pitch = mid (vb::PITCH);
+    pitch.mix = 0;
+    CHECK (vbdsp::makeModule (pitch, 0, 0)->latencySamples() == 0);
+    vb::ChainSpec c;
+    vb::LaneSpec l;
+    l.nModules = 2;
+    l.slots[0] = mid (vb::SAT);
+    l.slots[0].p = { 0, 32768, 0, 0, 0, 0 };
+    l.slots[1] = pitch;
+    c.lanes.push_back (l);
+    vbdsp::Engine e;
+    e.setSpec (c);
+    e.prepare (SR, BLOCK);
+    e.setMix (0.5f);
+    e.reset();
+    std::vector<float> in (8192, 0.0f);
+    in[0] = 0.1f;
+    const auto out = render (e, in, in, BLOCK);
+    std::size_t k = 0;
+    for (std::size_t i = 1; i < out.L.size(); ++i)
+        if (std::abs (out.L[i]) > std::abs (out.L[k]))
+            k = i;
+    CHECK (k == static_cast<std::size_t> (e.latencySamples()));
+}
+
+TEST_CASE ("PITCH shifts a sine by the interval", "[effects]")
+{
+    // +12 semitones, no detune: a 500 Hz sine comes out with its energy at 1000 Hz.
+    vb::ModuleSpec p;
+    p.type = vb::PITCH;
+    p.p = { 65535, 32768, 32768, 0, 0, 0 };
+    p.mix = 65535;
+    auto m = vbdsp::makeModule (p, 0, 0);
+    m->prepare (SR, BLOCK);
+    vbdsp::ModCtx ctx;
+    ctx.macroScaling = false;
+    const auto n = static_cast<std::size_t> (SR);
+    auto L = sine (n, 500.0, SR, -12.0);
+    auto R = L;
+    const auto in = L;
+    for (std::size_t s = 0; s < n; s += BLOCK)
+        m->process (L.data() + s, R.data() + s, static_cast<int> (std::min<std::size_t> (BLOCK, n - s)), ctx);
+    // Wet = (y - 0.5 x) / 0.5; correlate against 1000 Hz and 500 Hz over the second half.
+    auto power = [&] (double hz) {
+        double re = 0, im = 0;
+        for (std::size_t i = n / 2; i < n; ++i)
+        {
+            const double w = (L[i] - 0.5 * in[i]) / 0.5;
+            re += w * std::cos (2.0 * 3.141592653589793 * hz * static_cast<double> (i) / SR);
+            im += w * std::sin (2.0 * 3.141592653589793 * hz * static_cast<double> (i) / SR);
+        }
+        return re * re + im * im;
+    };
+    CHECK (power (1000.0) > 100.0 * power (500.0));
 }
