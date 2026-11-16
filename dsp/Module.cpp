@@ -2,11 +2,13 @@
 
 #include "Catalog.h"
 #include "fx/Chorus.h"
+#include "fx/Comp.h"
 #include "fx/Crush.h"
 #include "fx/Delay.h"
 #include "fx/Filter.h"
 #include "fx/Phaser.h"
 #include "fx/Sat.h"
+#include "fx/Verb.h"
 
 namespace vbdsp
 {
@@ -33,6 +35,8 @@ std::unique_ptr<Module> makeModule (const vb::ModuleSpec& spec, std::uint64_t la
         case vb::CHORUS:
         case vb::FLANGE: return std::make_unique<Chorus> (spec);
         case vb::PHASER: return std::make_unique<Phaser> (spec);
+        case vb::VERB:   return std::make_unique<Verb> (spec);
+        case vb::COMP:   return std::make_unique<Comp> (spec);
         default:        return std::make_unique<PassThrough>();
     }
 }

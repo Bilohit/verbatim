@@ -27,6 +27,7 @@ struct Fx
 const std::vector<Fx> implemented = {
     { vb::SAT, 1.0 }, { vb::DELAY, 5.0 }, { vb::FILTER, 1.0 }, { vb::CRUSH, 1.0 },
     { vb::CHORUS, 1.0 }, { vb::PHASER, 2.0 }, { vb::FLANGE, 2.0 },
+    { vb::VERB, 6.0 }, { vb::COMP, 1.0 },
 };
 
 vb::ModuleSpec mid (std::uint8_t type)
