@@ -122,7 +122,7 @@ Note length `T = (4 / timeDiv)` beats at host tempo (120 BPM if unknown). Used b
 | 6 PHASER | p0 rate | RATE + | `exp(0.05, 4)` Hz | `juce::dsp::Phaser`. |
 | | p1 depth | | `lin(0.3, 1.0)` | |
 | | p2 centre freq | TONE + | `exp(300, 3000)` Hz | Mod range ±1 octave. |
-| | p3 feedback | TAIL + | `lin(0, 0.85)` | |
+| | p3 feedback | TAIL + | `lin(0, 0.7)` (narrowed from 0.85 at T14: D4 peak) | |
 | | mix | DEPTH + | `lin(0.3, 0.6)` | |
 | 7 TREM | p0 rate | RATE + | `exp(0.5, 12)` Hz, or period `T` | |
 | | p1 depth | | `lin(0.2, 0.9)` | Mod range ±0.2. |
@@ -165,7 +165,7 @@ Note length `T = (4 / timeDiv)` beats at host tempo (120 BPM if unknown). Used b
 | 15 FLANGE | p0 rate | RATE + | `exp(0.05, 2)` Hz | `juce::dsp::Chorus` with a short centre delay. |
 | | p1 depth | | `lin(0.2, 0.8)` | |
 | | p2 delay | | `lin(1, 8)` ms centre delay | Mod range ±1 ms. |
-| | p3 feedback | TAIL + | `lin(−0.85, 0.85)` | |
+| | p3 feedback | TAIL + | `lin(−0.7, 0.7)` (narrowed from 0.85 at T14: D4 peak) | |
 | | mix | DEPTH + | `lin(0.3, 0.5)` | |
 
 ## 3. Calibration

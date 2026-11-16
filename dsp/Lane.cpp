@@ -243,10 +243,10 @@ void Lane::process (const float* inL, const float* inR, float* outL, float* outR
                     fbHp[ch] += fbHpA * (fbLp[ch] - fbHp[ch]);
                     filtered[ch] = fbLp[ch] - fbHp[ch];
                 }
-                // Governor: the fed-back level never exceeds the lane input envelope, so a loop whose
+                // Governor: the fed-back level never exceeds fbGain x the lane input envelope, so a loop whose
                 // module gain is above 1/fbGain (e.g. SAT at full drive) still dies out after the input stops.
                 const double in = std::max (std::abs (dst[0][i]), std::abs (dst[1][i]));
-                const double fb = std::max (std::abs (filtered[0]), std::abs (filtered[1])) * fbGain;
+                const double fb = std::max (std::abs (filtered[0]), std::abs (filtered[1]));
                 govIn += (in > govIn ? govAtt : govRel) * (in - govIn);
                 govFb += (fb > govFb ? govAtt : govRel) * (fb - govFb);
                 const double g = govFb > govIn ? govIn / govFb : 1.0;

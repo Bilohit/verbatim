@@ -8,4 +8,6 @@ set(VERBATIM_DSP_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/fx/Delay.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/fx/Filter.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/fx/Crush.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/fx/Chorus.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/fx/Phaser.cpp
     PARENT_SCOPE)

@@ -26,6 +26,7 @@ struct Fx
 
 const std::vector<Fx> implemented = {
     { vb::SAT, 1.0 }, { vb::DELAY, 5.0 }, { vb::FILTER, 1.0 }, { vb::CRUSH, 1.0 },
+    { vb::CHORUS, 1.0 }, { vb::PHASER, 2.0 }, { vb::FLANGE, 2.0 },
 };
 
 vb::ModuleSpec mid (std::uint8_t type)
@@ -122,5 +123,28 @@ TEST_CASE ("D5 denormals: 60 s of 1e-30 noise costs at most 20 % more than norma
         const double denorm = std::min (timeOf (tiny), timeOf (tiny));
         INFO ("per-sample time normal " << base << " tiny " << denorm);
         CHECK (denorm <= base * 1.2);
+    }
+}
+
+TEST_CASE ("Every implemented effect is active: full-mix output differs from dry", "[effects]")
+{
+    for (const auto& fx : implemented)
+    {
+        INFO ("type " << vb::catalog[fx.type].name);
+        auto spec = mid (fx.type);
+        spec.mix = 65535;
+        auto m = vbdsp::makeModule (spec, 0x1234, 0);
+        m->prepare (SR, BLOCK);
+        auto L = pinkNoise (48000, 33, -18.0);
+        auto R = L;
+        const auto in = L;
+        vbdsp::ModCtx ctx;
+        for (std::size_t s = 0; s < L.size(); s += BLOCK)
+            m->process (L.data() + s, R.data() + s, static_cast<int> (std::min<std::size_t> (BLOCK, L.size() - s)), ctx);
+        const auto d = static_cast<std::size_t> (m->latencySamples());
+        double diff = 0;
+        for (std::size_t i = d; i < L.size(); ++i)
+            diff += (static_cast<double> (L[i]) - in[i - d]) * (static_cast<double> (L[i]) - in[i - d]);
+        CHECK (toDb (std::sqrt (diff / static_cast<double> (L.size() - d))) > -40.0);
     }
 }

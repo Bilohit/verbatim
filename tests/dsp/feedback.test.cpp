@@ -102,3 +102,22 @@ TEST_CASE ("F3 subset: every effect type at max params with lane feedback 3 stay
         CHECK (r.tailDb < -60.0);
     }
 }
+
+TEST_CASE ("D4 effects at max feedback inside lane feedback 3: decay, pre-clip peak at most 4", "[D4]")
+{
+    // Feedback param index per effect (catalog): DELAY p1, PHASER p3, FLANGE p3. Extended by T17/T18.
+    struct Case { std::uint8_t type; int fbParam; };
+    for (const auto c : { Case { vb::DELAY, 1 }, Case { vb::PHASER, 3 }, Case { vb::FLANGE, 3 } })
+    {
+        INFO ("type " << vb::catalog[c.type].name);
+        vb::ModuleSpec m;
+        m.type = c.type;
+        m.p.fill (32768);
+        m.p[static_cast<std::size_t> (c.fbParam)] = 65535;
+        m.mix = 65535;
+        const auto r = burstThenSilence (feedbackLane ({ m }, 3), 0.5, 12.0);
+        CHECK (r.finite);
+        CHECK (r.prePeak <= 4.0);
+        CHECK (r.tailDb < -60.0);
+    }
+}
