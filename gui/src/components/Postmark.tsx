@@ -29,6 +29,7 @@ export function Postmark({ hash, shake = 0 }: { hash: string; shake?: number }) 
       data-stamp={hash}
       data-shake={alert ? "true" : undefined}
       data-alert={alert && reduce ? "true" : undefined}
+      style={{ rotate: -9 }} // the tilt goes through framer-motion; a CSS transform would be overwritten by the stamp
       {...stamp(reduce)}
     >
       {hash}

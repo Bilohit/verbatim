@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 320" width="1200" height="320" role="img" aria-label="Verbatim">
+  <rect width="1200" height="320" rx="18" fill="#91bba9"/>
+  <rect x="96" y="44" width="1008" height="196" fill="#f8f6f1"/>
+  <rect x="64" y="236" width="1072" height="20" rx="10" fill="#171d1b"/>
+  <text x="150" y="132" font-family="'Courier Prime', 'Courier New', monospace" font-size="64" font-weight="700" fill="#1b1d26">Verbatim</text>
+  <text x="152" y="186" font-family="'Courier Prime', 'Courier New', monospace" font-size="26" fill="#5f6370"><tspan text-decoration="underline">dark</tspan> tape<tspan fill="#b3121f" font-weight="700">,</tspan> <tspan text-decoration="underline">slow</tspan> echo<tspan fill="#b3121f" font-weight="700">!</tspan></text>
+  <g transform="translate(990 140) rotate(-9)" fill="none" stroke="#b3121f" stroke-width="2.5">
+    <circle r="58"/>
+    <circle r="49"/>
+    <text text-anchor="middle" y="7" font-family="'IBM Plex Mono', 'Consolas', monospace" font-size="17" fill="#b3121f" stroke="none">5768382d</text>
+  </g>
+  <g fill="#1f2a26" stroke="#e6ecea" stroke-width="3">
+    <circle cx="150" cy="292" r="16"/><circle cx="196" cy="292" r="16"/><circle cx="242" cy="292" r="16"/><circle cx="288" cy="292" r="16"/>
+  </g>
+</svg>
