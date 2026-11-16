@@ -19,6 +19,19 @@ function plainTokens(text: string): Token[][] {
   });
 }
 
+// Deterministic stand-in chain for text outside the fixture: 2-6 effects per non-blank line, max 4 lanes.
+function pseudoChain(text: string): Lane[] {
+  const lanes: Lane[] = [];
+  for (const line of text.split("\n")) {
+    if (!line.trim() || lanes.length === 4) continue;
+    let h = 2166136261;
+    for (const c of line) h = Math.imul(h ^ c.charCodeAt(0), 16777619) >>> 0;
+    const n = 2 + (h % 5);
+    lanes.push({ lane: lanes.length, modules: Array.from({ length: n }, (_, k) => ({ type: (h >>> (k * 3)) % 16, name: "FX", held: false })) });
+  }
+  return lanes;
+}
+
 export function createMockBridge(delayMs = 0): Bridge & { calls: { name: string; args: unknown }[] } {
   let current: TextPayload = { text: "", tokens: [[]], chain: [], seedHash: "", ignoredLines: [], full: false };
   let ui: UiState = { w: 900, h: 620, advanced: false };
@@ -26,12 +39,12 @@ export function createMockBridge(delayMs = 0): Bridge & { calls: { name: string;
   const levelsListeners = new Set<(l: Levels) => void>();
   const later = <T,>(v: T) => new Promise<T>((r) => setTimeout(() => r(v), delayMs));
 
-  return {
+  const bridge = {
     calls,
     setText(text) {
       calls.push({ name: "setText", args: text });
       const hit = known.get(text);
-      current = hit ?? { text, tokens: plainTokens(text), chain: [], seedHash: text.trim() ? "0000beef" : "", ignoredLines: [], full: new TextEncoder().encode(text).length >= 4096 };
+      current = hit ?? { text, tokens: plainTokens(text), chain: pseudoChain(text), seedHash: text.trim() ? "0000beef" : "", ignoredLines: [], full: new TextEncoder().encode(text).length >= 4096 };
       return later(current);
     },
     setOverride(args: OverrideArgs) {
@@ -61,4 +74,6 @@ export function createMockBridge(delayMs = 0): Bridge & { calls: { name: string;
       return () => levelsListeners.delete(cb as (l: Levels) => void);
     },
   } as Bridge & { calls: { name: string; args: unknown }[] };
+  (globalThis as unknown as { __mockBridge: unknown }).__mockBridge = bridge; // tests read the recorded calls
+  return bridge;
 }
