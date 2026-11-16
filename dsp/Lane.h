@@ -37,6 +37,7 @@ private:
     };
 
     void runModules (std::size_t from, std::size_t to, float* L, float* R, int n);
+    void processModules (float* L, float* R, int n); // serial or split
     int latencyOf (std::size_t from, std::size_t to) const;
 
     vb::LaneSpec spec;
@@ -51,6 +52,13 @@ private:
 
     std::vector<float> rawL, rawR, splitL, splitR;
     Ring dryDelay, splitDelay, pad;
+
+    // Lane feedback (>): modules output -> 10 ms -> HP 80 Hz -> LP 6 kHz -> gain -> tanh -> modules input.
+    std::vector<float> fbL, fbR;
+    int fbLen = 0, fbPos = 0;
+    float fbGain = 0.0f;
+    double fbHpA = 0.0, fbLpA = 0.0, fbHp[2] {}, fbLp[2] {};
+    double govAtt = 0.0, govRel = 0.0, govIn = 0.0, govFb = 0.0; // feedback governor envelopes
     bool splitDelayOnA = false;
 
     double dcR = 0.0;

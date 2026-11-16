@@ -102,6 +102,15 @@ void Lane::prepare (double sampleRate, int maxBlock)
         splitDelay.setDelay (std::abs (a - b));
     }
     pad.setDelay (0);
+    static constexpr float fbSteps[] = { 0.0f, 0.25f, 0.40f, 0.55f };
+    fbGain = fbSteps[std::min<int> (spec.feedback, 3)];
+    fbLen = static_cast<int> (std::lround (0.010 * sampleRate));
+    fbL.assign (static_cast<std::size_t> (fbLen), 0.0f);
+    fbR.assign (static_cast<std::size_t> (fbLen), 0.0f);
+    fbHpA = 1.0 - std::exp (-2.0 * pi * 80.0 / sampleRate);
+    fbLpA = 1.0 - std::exp (-2.0 * pi * 6000.0 / sampleRate);
+    govAtt = 1.0 - std::exp (-1.0 / (0.010 * sampleRate));
+    govRel = 1.0 - std::exp (-1.0 / (0.300 * sampleRate));
     dcR = std::exp (-2.0 * pi * 5.0 / sampleRate);
     meterCoef = 1.0 - std::exp (-1.0 / (0.3 * sampleRate));
     reset();
@@ -122,8 +131,12 @@ void Lane::reset()
     splitDelay.clear();
     pad.clear();
     duckEnv = 0.0;
+    std::fill (fbL.begin(), fbL.end(), 0.0f);
+    std::fill (fbR.begin(), fbR.end(), 0.0f);
+    fbPos = 0;
+    govIn = govFb = 0.0;
     for (int c = 0; c < 2; ++c)
-        dcX1[c] = dcY1[c] = 0.0;
+        dcX1[c] = dcY1[c] = fbHp[c] = fbLp[c] = 0.0;
     meterSq = 0.0;
     meterRms = 0.0f;
 }
@@ -133,6 +146,29 @@ void Lane::runModules (std::size_t from, std::size_t to, float* L, float* R, int
     const ModCtx ctx;
     for (std::size_t k = from; k < to; ++k)
         modules[k]->process (L, R, n, ctx);
+}
+
+void Lane::processModules (float* outL, float* outR, int n) // audio-thread
+{
+    if (splitAt == 0)
+    {
+        runModules (0, modules.size(), outL, outR, n);
+        return;
+    }
+    std::copy (outL, outL + n, splitL.begin());
+    std::copy (outR, outR + n, splitR.begin());
+    runModules (0, splitAt, outL, outR, n);
+    runModules (splitAt, modules.size(), splitL.data(), splitR.data(), n);
+    if (splitDelayOnA)
+        splitDelay.process (outL, outR, n);
+    else
+        splitDelay.process (splitL.data(), splitR.data(), n);
+    for (int i = 0; i < n; ++i)
+    {
+        const auto k = static_cast<std::size_t> (i);
+        outL[i] = (outL[i] + splitL[k]) * 0.707f;
+        outR[i] = (outR[i] + splitR[k]) * 0.707f;
+    }
 }
 
 void Lane::process (const float* inL, const float* inR, float* outL, float* outR, int n) // audio-thread
@@ -153,25 +189,48 @@ void Lane::process (const float* inL, const float* inR, float* outL, float* outR
             for (int i = 0; i < n; ++i)
                 io[c][i] = std::tanh (io[c][i] * driveGain) * driveNorm;
 
-    if (splitAt == 0)
+    if (fbGain == 0.0f)
     {
-        runModules (0, modules.size(), outL, outR, n);
+        processModules (outL, outR, n);
     }
     else
     {
-        std::copy (outL, outL + n, splitL.begin());
-        std::copy (outR, outR + n, splitR.begin());
-        runModules (0, splitAt, outL, outR, n);
-        runModules (splitAt, modules.size(), splitL.data(), splitR.data(), n);
-        if (splitDelayOnA)
-            splitDelay.process (outL, outR, n);
-        else
-            splitDelay.process (splitL.data(), splitR.data(), n);
-        for (int i = 0; i < n; ++i)
+        // Chunks no longer than the loop delay keep the feedback causal at any block size.
+        for (int start = 0; start < n; start += fbLen)
         {
-            const auto k = static_cast<std::size_t> (i);
-            outL[i] = (outL[i] + splitL[k]) * 0.707f;
-            outR[i] = (outR[i] + splitR[k]) * 0.707f;
+            const int c = std::min (fbLen, n - start);
+            float* L = outL + start;
+            float* R = outR + start;
+            for (int i = 0; i < c; ++i)
+            {
+                const auto p = static_cast<std::size_t> ((fbPos + i) % fbLen);
+                const float tap[2] = { fbL[p], fbR[p] };
+                float* dst[2] = { L, R };
+                double filtered[2];
+                for (int ch = 0; ch < 2; ++ch)
+                {
+                    fbLp[ch] += fbLpA * (tap[ch] - fbLp[ch]);
+                    fbHp[ch] += fbHpA * (fbLp[ch] - fbHp[ch]);
+                    filtered[ch] = fbLp[ch] - fbHp[ch];
+                }
+                // Governor: the fed-back level never exceeds the lane input envelope, so a loop whose
+                // module gain is above 1/fbGain (e.g. SAT at full drive) still dies out after the input stops.
+                const double in = std::max (std::abs (dst[0][i]), std::abs (dst[1][i]));
+                const double fb = std::max (std::abs (filtered[0]), std::abs (filtered[1])) * fbGain;
+                govIn += (in > govIn ? govAtt : govRel) * (in - govIn);
+                govFb += (fb > govFb ? govAtt : govRel) * (fb - govFb);
+                const double g = govFb > govIn ? govIn / govFb : 1.0;
+                for (int ch = 0; ch < 2; ++ch)
+                    dst[ch][i] += std::tanh (static_cast<float> (filtered[ch] * fbGain * g));
+            }
+            processModules (L, R, c);
+            for (int i = 0; i < c; ++i)
+            {
+                const auto p = static_cast<std::size_t> ((fbPos + i) % fbLen);
+                fbL[p] = L[i];
+                fbR[p] = R[i];
+            }
+            fbPos = (fbPos + c) % fbLen;
         }
     }
 

@@ -37,7 +37,8 @@ if(VERBATIM_BUILD_DSP)
         ${VERBATIM_DSP_SOURCES}
         dsp/harness.cpp
         dsp/engine.test.cpp
-        dsp/lane.test.cpp)
+        dsp/lane.test.cpp
+        dsp/feedback.test.cpp)
     target_include_directories(verbatim_dsp_tests PRIVATE ${PROJECT_SOURCE_DIR} ${PROJECT_SOURCE_DIR}/dsp)
     target_compile_definitions(verbatim_dsp_tests PRIVATE
         JUCE_STANDALONE_APPLICATION=1 JUCE_USE_CURL=0 JUCE_WEB_BROWSER=0)
