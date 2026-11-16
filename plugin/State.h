@@ -1,5 +1,7 @@
 #pragma once
 // Plugin state as UTF-8 JSON (docs/02-spec.md section 4).
+#include "Resolve.h"
+
 #include <string>
 
 namespace vbplugin
@@ -11,6 +13,7 @@ struct PluginState
     std::string text;
     // Host parameter values, stored so a project reload restores them with the text.
     float mix = 100.0f, macro = 0.5f, outputDb = 0.0f;
+    vb::Overrides overrides;
 };
 
 std::string toJson (const PluginState& state);

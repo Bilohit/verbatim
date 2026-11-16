@@ -4,6 +4,9 @@
 #include "plugin/State.h"
 #include "plugin/VerbatimProcessor.h"
 
+#include "Catalog.h"
+#include "Generate.h"
+#include "Resolve.h"
 #include "Rng.h"
 
 #include <cmath>
@@ -195,4 +198,63 @@ TEST_CASE ("Typing marks the project dirty (non-parameter state changed)", "[sta
     CHECK (listener.dirty);
     CHECK (! p.isStateError());
     p.removeListener (&listener);
+}
+
+TEST_CASE ("F4 random override sequences round-trip through state JSON to an identical ResolvedChain", "[F4]")
+{
+    static const char* texts[] = { "hello", "tape echo", "dark tape, slow echo!", "a\nb\nc\nd", "wait.. what...", "x" };
+    vb::SplitMix64 r { 0xF4F4 };
+    for (int seq = 0; seq < 5000; ++seq)
+    {
+        vbplugin::PluginState s;
+        s.text = texts[r.next() % std::size (texts)];
+        auto spec = vb::generate (s.text);
+        for (int step = 0; step < 8; ++step)
+        {
+            if (r.next() % 5 == 0)
+            {
+                s.text = texts[r.next() % std::size (texts)];
+                spec = vb::generate (s.text);
+            }
+            vb::ModuleSpec m { static_cast<std::uint8_t> (r.next() % vb::EFFECT_COUNT), {}, static_cast<std::uint16_t> (r.next()) };
+            for (auto& p : m.p)
+                p = static_cast<std::uint16_t> (r.next());
+            vb::applyOverride (s.overrides, spec, static_cast<int> (r.next() % 4), static_cast<vb::OverrideOp> (r.next() % 5),
+                               static_cast<int> (r.next() % 9) - 1, m);
+        }
+        vbplugin::PluginState back;
+        REQUIRE (vbplugin::fromJson (vbplugin::toJson (s), back));
+        REQUIRE (back.overrides == s.overrides);
+        const auto a = vb::resolve (spec, s.overrides), b = vb::resolve (vb::generate (back.text), back.overrides);
+        REQUIRE (a.lanes.size() == b.lanes.size());
+        for (std::size_t i = 0; i < a.lanes.size(); ++i)
+            REQUIRE (a.lanes[i].modules == b.lanes[i].modules);
+    }
+}
+
+TEST_CASE ("R5 with overrides: hold, edit, add and remove survive save and reload bit identically", "[R5]")
+{
+    JuceInit juce;
+    const auto in = noise (static_cast<std::size_t> (3 * SR), 14);
+    VerbatimProcessor a;
+    loadText (a, "hello");
+    a.prepareToPlay (SR, BLOCK);
+    REQUIRE (a.setOverride (0, vb::OverrideOp::Hold, 0));
+    auto edited = a.getResolved().lanes[0].modules[1].spec;
+    edited.p[0] = 999;
+    REQUIRE (a.setOverride (0, vb::OverrideOp::Edit, 1, edited));
+    REQUIRE (a.setOverride (0, vb::OverrideOp::Add, -1, vb::ModuleSpec { vb::DELAY, { 30000, 20000, 40000, 0, 0, 0 }, 40000 }));
+    REQUIRE (a.setOverride (0, vb::OverrideOp::Remove, 3));
+    juce::MemoryBlock blob;
+    a.getStateInformation (blob);
+    a.prepareToPlay (SR, BLOCK); // start from the resolved chain directly, as a reload does
+    const auto outA = render (a, in);
+
+    VerbatimProcessor b;
+    b.setStateInformation (blob.getData(), static_cast<int> (blob.getSize()));
+    b.prepareToPlay (SR, BLOCK);
+    const auto outB = render (b, in);
+    CHECK (b.getResolved().lanes[0].modules == a.getResolved().lanes[0].modules);
+    CHECK (sameBits (outA[0], outB[0]));
+    CHECK (sameBits (outA[1], outB[1]));
 }

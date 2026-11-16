@@ -2,6 +2,7 @@
 // Engine: dry delay, lane sum, Mix, Output, SafetyClip, meters, and lock-free chain swap with a
 // 30 ms crossfade (docs/02-spec.md sections 2 and 5).
 #include "ChainSpec.h"
+#include "Resolve.h"
 #include "Lane.h"
 
 #include <atomic>
@@ -21,7 +22,8 @@ public:
 
     // Non-audio threads. prepare() builds the active chain synchronously.
     void prepare (double sampleRate, int maxBlock);
-    void setSpec (const vb::ChainSpec& spec);
+    void setSpec (const vb::ChainSpec& spec); // no overrides
+    void setResolved (const vb::ResolvedChain& chain);
     void collectGarbage();
     void reset();
 
@@ -49,10 +51,10 @@ public:
     } meters;
 
 private:
-    Chain* build (const vb::ChainSpec& spec) const;
+    Chain* build (const vb::ResolvedChain& chain) const;
 
     std::mutex buildMutex; // non-audio threads only
-    vb::ChainSpec lastSpec;
+    vb::ResolvedChain lastChain;
     double sampleRate = 0.0;
     int maxBlock = 0;
     int lFixed = 0;

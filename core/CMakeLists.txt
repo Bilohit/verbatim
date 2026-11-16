@@ -3,5 +3,6 @@ add_library(verbatim_core STATIC
     Tokenizer.cpp
     Parse.cpp
     Generate.cpp
-    Serialize.cpp)
+    Serialize.cpp
+    Resolve.cpp)
 target_include_directories(verbatim_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${PROJECT_SOURCE_DIR}/third_party)

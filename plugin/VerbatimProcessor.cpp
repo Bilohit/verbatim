@@ -113,6 +113,7 @@ void VerbatimProcessor::getStateInformation (juce::MemoryBlock& dest)
     s.mix = mix->get();
     s.macro = macro->get();
     s.outputDb = output->get();
+    s.overrides = overrides;
     const auto json = vbplugin::toJson (s);
     dest.append (json.data(), json.size());
 }
@@ -128,12 +129,18 @@ void VerbatimProcessor::setStateInformation (const void* data, int size)
         stateError = true;
         unloadableBlob = blob;
         text.clear();
-        engine.setSpec (vb::ChainSpec {});
+        spec = {};
+        overrides = {};
+        engine.setSpec (spec);
         return;
     }
     mix->setValueNotifyingHost (mix->convertTo0to1 (s.mix));
     macro->setValueNotifyingHost (macro->convertTo0to1 (s.macro));
     output->setValueNotifyingHost (output->convertTo0to1 (s.outputDb));
+    {
+        std::lock_guard<std::mutex> lock (stateMutex);
+        overrides = s.overrides;
+    }
     applyText (s.text);
 }
 
@@ -149,6 +156,24 @@ std::string VerbatimProcessor::getText() const
     return text;
 }
 
+bool VerbatimProcessor::setOverride (int lane, vb::OverrideOp op, int position, const vb::ModuleSpec& module)
+{
+    {
+        std::lock_guard<std::mutex> lock (stateMutex);
+        if (stateError || ! vb::applyOverride (overrides, spec, lane, op, position, module))
+            return false;
+        engine.setResolved (vb::resolve (spec, overrides));
+    }
+    updateHostDisplay (ChangeDetails().withNonParameterStateChanged (true));
+    return true;
+}
+
+vb::ResolvedChain VerbatimProcessor::getResolved() const
+{
+    std::lock_guard<std::mutex> lock (stateMutex);
+    return vb::resolve (spec, overrides);
+}
+
 bool VerbatimProcessor::isStateError() const
 {
     std::lock_guard<std::mutex> lock (stateMutex);
@@ -161,7 +186,8 @@ void VerbatimProcessor::applyText (const std::string& newText)
     text = newText;
     stateError = false;
     unloadableBlob.clear();
-    engine.setSpec (vb::generate (newText)); // synchronous build (docs/02-spec.md section 2)
+    spec = vb::generate (newText);
+    engine.setResolved (vb::resolve (spec, overrides)); // synchronous build (docs/02-spec.md section 2)
 }
 
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()

@@ -44,6 +44,10 @@ public:
     std::string getText() const;
     bool isStateError() const;
 
+    // Message thread: hold / release / edit / remove / add (docs/02-spec.md R1-R7). False when rejected.
+    bool setOverride (int lane, vb::OverrideOp op, int position, const vb::ModuleSpec& module = {});
+    vb::ResolvedChain getResolved() const;
+
     juce::AudioProcessorValueTreeState params;
 
 private:
@@ -57,6 +61,8 @@ private:
 
     mutable std::mutex stateMutex; // non-audio threads only
     std::string text;
+    vb::ChainSpec spec;
+    vb::Overrides overrides;
     bool stateError = false;
     std::string unloadableBlob; // kept verbatim while in state E3
 

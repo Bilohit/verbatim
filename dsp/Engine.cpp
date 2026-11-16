@@ -73,14 +73,16 @@ int Engine::swapWarmupSamples() const
     return active != nullptr ? active->warmup : 0;
 }
 
-Chain* Engine::build (const vb::ChainSpec& spec) const
+Chain* Engine::build (const vb::ResolvedChain& chain) const
 {
     auto* c = new Chain();
     const auto m = static_cast<std::size_t> (maxBlock);
-    for (const auto& l : spec.lanes)
+    for (const auto& l : chain.lanes)
     {
-        std::vector<vb::ModuleSpec> mods (l.slots.begin(), l.slots.begin() + l.nModules);
-        auto lane = std::make_unique<Lane> (l, mods);
+        std::vector<vb::ModuleSpec> mods;
+        for (const auto& rm : l.modules)
+            mods.push_back (rm.spec);
+        auto lane = std::make_unique<Lane> (l.lane, mods);
         lane->prepare (sampleRate, maxBlock);
         c->lanes.push_back (std::move (lane));
         c->outL.emplace_back (m, 0.0f);
@@ -136,7 +138,7 @@ void Engine::prepare (double sr, int block)
     old = nullptr;
     fading.store (false);
     collectGarbage();
-    active = build (lastSpec);
+    active = build (lastChain);
     fadeLen = static_cast<int> (std::lround (0.03 * sr));
     fadeInLen = std::max (1, static_cast<int> (std::lround (0.005 * sr)));
     fadeInPos = fadeInLen;
@@ -150,11 +152,16 @@ void Engine::prepare (double sr, int block)
 
 void Engine::setSpec (const vb::ChainSpec& spec)
 {
+    setResolved (vb::resolve (spec, {}));
+}
+
+void Engine::setResolved (const vb::ResolvedChain& chain)
+{
     std::lock_guard<std::mutex> lock (buildMutex);
-    lastSpec = spec;
+    lastChain = chain;
     if (maxBlock == 0)
         return; // not prepared yet: prepare() builds it
-    delete pending.exchange (build (spec)); // deletes a chain the audio thread never took
+    delete pending.exchange (build (chain)); // deletes a chain the audio thread never took
 }
 
 void Engine::collectGarbage()
