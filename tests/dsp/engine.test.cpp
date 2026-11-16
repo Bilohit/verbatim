@@ -304,9 +304,11 @@ TEST_CASE ("R4 swap: no click and a 30 ms fade, no allocation on the audio threa
         if (start > swapBlockStart && ! f && endedAt == 0)
             endedAt = start;
     REQUIRE (endedAt > 0);
-    // The fade is observed at block starts, so it ended somewhere in (endedAt - BLOCK, endedAt].
-    CHECK (endedAt - swapBlockStart >= fadeLen);
-    CHECK (endedAt - BLOCK - swapBlockStart < fadeLen + BLOCK);
+    // The audible fade follows the new chain's silent warm-up (ruling at T16). Observed at block starts,
+    // so the swap ended somewhere in (endedAt - BLOCK, endedAt].
+    const auto warmup = static_cast<std::size_t> (e.swapWarmupSamples());
+    CHECK (endedAt - swapBlockStart >= warmup + fadeLen);
+    CHECK (endedAt - BLOCK - swapBlockStart < warmup + fadeLen + BLOCK);
 
     auto maxStep = [&] (std::size_t from, std::size_t to) {
         double m = 0;
@@ -316,7 +318,7 @@ TEST_CASE ("R4 swap: no click and a 30 ms fade, no allocation on the audio threa
     };
     const double steady = std::max (maxStep (swapBlockStart - static_cast<std::size_t> (SR / 2), swapBlockStart),
                                     maxStep (swapBlockStart + static_cast<std::size_t> (SR / 2), out.L.size()));
-    const double across = maxStep (swapBlockStart, swapBlockStart + fadeLen + BLOCK);
+    const double across = maxStep (swapBlockStart, swapBlockStart + static_cast<std::size_t> (e.swapWarmupSamples()) + fadeLen + BLOCK);
     const double signalRms = rms (out.L.data(), out.L.size());
     INFO ("steady " << steady << " across " << across << " rms " << signalRms);
     CHECK (across <= steady + std::pow (10.0, -30.0 / 20.0) * signalRms);

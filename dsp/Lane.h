@@ -31,6 +31,7 @@ public:
     void process (const float* inL, const float* inR, float* outL, float* outR, int n, const BlockCtx& ctx);
 
     int latencySamples() const; // module latency (split: the slower half)
+    int warmupSamples() const;  // latency + every module warm-up (upper bound)
     bool takesPreviousLane() const { return spec.chain != 0; }
     int nanCount() const { return nans; }
     float rms() const { return meterRms; }

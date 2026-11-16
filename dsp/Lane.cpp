@@ -64,6 +64,14 @@ int Lane::latencySamples() const
     return std::max (latencyOf (0, splitAt), latencyOf (splitAt, modules.size()));
 }
 
+int Lane::warmupSamples() const
+{
+    int w = latencySamples();
+    for (const auto& m : modules)
+        w += m->warmupSamples();
+    return w;
+}
+
 void Lane::prepare (double sampleRate, int maxBlock)
 {
     for (auto& m : modules)

@@ -19,6 +19,7 @@ Verb::Verb (const vb::ModuleSpec& spec)
 
 void Verb::prepare (double sampleRate, int maxBlock)
 {
+    sr = sampleRate;
     reverb.setSampleRate (sampleRate);
     reverb.setParameters (params);
     preLen = std::max (1, static_cast<int> (std::lround (predelayMs * 0.001 * sampleRate)));

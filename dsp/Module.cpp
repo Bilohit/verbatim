@@ -8,6 +8,7 @@
 #include "fx/Filter.h"
 #include "fx/Phaser.h"
 #include "fx/Sat.h"
+#include "fx/Trem.h"
 #include "fx/Verb.h"
 
 namespace vbdsp
@@ -37,6 +38,9 @@ std::unique_ptr<Module> makeModule (const vb::ModuleSpec& spec, std::uint64_t la
         case vb::PHASER: return std::make_unique<Phaser> (spec);
         case vb::VERB:   return std::make_unique<Verb> (spec);
         case vb::COMP:   return std::make_unique<Comp> (spec);
+        case vb::TREM:   return std::make_unique<Trem> (spec);
+        case vb::WOW:    return std::make_unique<Wow> (spec, laneSeed, slot);
+        case vb::RING:   return std::make_unique<Ring> (spec);
         default:        return std::make_unique<PassThrough>();
     }
 }

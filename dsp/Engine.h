@@ -38,6 +38,7 @@ public:
 
     int latencySamples() const { return lFixed; }
     bool swapInProgress() const { return fading.load(); }
+    int swapWarmupSamples() const; // silent pre-roll of the active chain before its crossfade
     int nanGuardCount() const { return nanTotal.load(); }
 
     struct Meters

@@ -69,6 +69,8 @@ public:
     virtual void reset() = 0;
     virtual void process (float* L, float* R, int n, const ModCtx& ctx) = 0; // audio-thread
     virtual int latencySamples() const { return 0; }
+    // Time until internal delay lines give continuous output after reset; a new chain stays silent this long.
+    virtual int warmupSamples() const { return 0; }
 };
 
 // Builds the module for a spec. Effects not yet implemented are pass-through modules.

@@ -14,6 +14,7 @@ public:
     void prepare (double sampleRate, int maxBlock) override;
     void reset() override;
     void process (float* L, float* R, int n, const ModCtx& ctx) override;
+    int warmupSamples() const override { return preLen + static_cast<int> (1617.0 / 44100.0 * sr); } // predelay + longest comb
 
 private:
     juce::Reverb::Parameters params;
@@ -21,6 +22,7 @@ private:
     juce::Reverb reverb;
     std::vector<float> pre[2], dryL, dryR;
     int preLen = 0, prePos = 0;
+    double sr = 48000.0;
     Smooth mixSmooth;
 };
 } // namespace vbdsp

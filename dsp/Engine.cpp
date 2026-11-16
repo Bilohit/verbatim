@@ -17,6 +17,7 @@ struct Chain
     std::vector<std::vector<float>> outL, outR; // per-lane output
     std::vector<float> sumL, sumR;
     float norm = 1.0f;                        // 1 / sqrt(lanes in the sum)
+    int warmup = 0;                           // silent pre-roll before this chain fades in
 
     // Output: dry*(1-mix) + wet*mix, or dry when there are no lanes. Returns NaN-guard events.
     int render (const float* inL, const float* inR, const float* dryL, const float* dryR, const float* mix,
@@ -67,6 +68,11 @@ Engine::~Engine()
     collectGarbage();
 }
 
+int Engine::swapWarmupSamples() const
+{
+    return active != nullptr ? active->warmup : 0;
+}
+
 Chain* Engine::build (const vb::ChainSpec& spec) const
 {
     auto* c = new Chain();
@@ -85,20 +91,26 @@ Chain* Engine::build (const vb::ChainSpec& spec) const
     // the summed lane at the end of each group is padded so the group's latency is L_FIXED.
     const auto count = c->lanes.size();
     c->summed.assign (count, true);
-    int groupLatency = 0, summedLanes = 0;
+    int groupLatency = 0, summedLanes = 0, groupWarmup = 0, warmup = 0;
     for (std::size_t i = 0; i < count; ++i)
     {
         groupLatency += c->lanes[i]->latencySamples();
+        groupWarmup += c->lanes[i]->warmupSamples();
+        warmup = std::max (warmup, groupWarmup);
         const bool consumed = i + 1 < count && c->lanes[i + 1]->takesPreviousLane();
         c->summed[i] = ! consumed;
         if (! consumed)
         {
             c->lanes[i]->setPad (lFixed - groupLatency);
             groupLatency = 0;
+            groupWarmup = 0;
             ++summedLanes;
         }
     }
     c->norm = summedLanes > 0 ? 1.0f / std::sqrt (static_cast<float> (summedLanes)) : 1.0f;
+    // A new chain stays silent until its delay lines are filled (at least L_FIXED, at most 250 ms),
+    // then crossfades in over 30 ms (ruling at T16).
+    c->warmup = std::clamp (warmup, lFixed, static_cast<int> (0.25 * sampleRate));
     c->sumL.assign (m, 0.0f);
     c->sumR.assign (m, 0.0f);
     return c;
@@ -274,17 +286,17 @@ void Engine::process (float* L, float* R, int n) // audio-thread
     if (fading.load (std::memory_order_relaxed))
     {
         nans += old->render (inL.data(), inR.data(), dryL.data(), dryR.data(), mixRamp.data(), outB_L.data(), outB_R.data(), n, ctx);
-        // The new chain first runs L_FIXED samples at weight 0 so its empty delay lines fill
+        // The new chain first runs its warm-up at weight 0 so its empty delay lines fill
         // before it becomes audible; then a linear 30 ms crossfade.
         for (int i = 0; i < n; ++i)
         {
             const auto k = static_cast<std::size_t> (i);
-            const float t = std::clamp (static_cast<float> (fadePos + i - lFixed) / static_cast<float> (fadeLen), 0.0f, 1.0f);
+            const float t = std::clamp (static_cast<float> (fadePos + i - active->warmup) / static_cast<float> (fadeLen), 0.0f, 1.0f);
             outA_L[k] = outB_L[k] * (1.0f - t) + outA_L[k] * t;
             outA_R[k] = outB_R[k] * (1.0f - t) + outA_R[k] * t;
         }
         fadePos += n;
-        if (fadePos >= lFixed + fadeLen)
+        if (fadePos >= active->warmup + fadeLen)
         {
             const int w = retireWrite.load (std::memory_order_relaxed);
             retire[w % retireCapacity] = old;

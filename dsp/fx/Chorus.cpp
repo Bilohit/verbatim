@@ -28,6 +28,7 @@ Chorus::Chorus (const vb::ModuleSpec& spec) : flange (spec.type == vb::FLANGE)
 
 void Chorus::prepare (double sampleRate, int maxBlock)
 {
+    sr = sampleRate;
     chorus.prepare ({ sampleRate, static_cast<juce::uint32> (maxBlock), 2 });
     chorus.setRate (rate);
     chorus.setFeedback (feedback);
