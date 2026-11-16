@@ -15,3 +15,5 @@ gui/dist/
 .vs/
 .vscode/
 FABLE_PROMPT.md
+gui/test-results/
+gui/playwright-report/
