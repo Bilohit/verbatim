@@ -129,6 +129,7 @@ std::string toJson (const PluginState& state)
     params->setProperty ("mix", state.mix);
     params->setProperty ("macro", state.macro);
     params->setProperty ("output", state.outputDb);
+    params->setProperty ("bypass", state.bypass);
 
     auto* root = new juce::DynamicObject();
     root->setProperty ("stateVersion", STATE_VERSION);
@@ -174,6 +175,7 @@ bool fromJson (const std::string& json, PluginState& out)
         s.mix = juce::jlimit (0.0f, 100.0f, num ("mix", s.mix));
         s.macro = juce::jlimit (0.0f, 1.0f, num ("macro", s.macro));
         s.outputDb = juce::jlimit (-24.0f, 12.0f, num ("output", s.outputDb));
+        s.bypass = params["bypass"].isBool() && static_cast<bool> (params["bypass"]);
     }
     if (! overridesFromVar (root["overrides"], s.overrides))
         return false;

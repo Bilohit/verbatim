@@ -117,6 +117,7 @@ void VerbatimProcessor::getStateInformation (juce::MemoryBlock& dest)
     s.mix = mix->get();
     s.macro = macro->get();
     s.outputDb = output->get();
+    s.bypass = bypass->get();
     s.overrides = overrides;
     s.uiW = ui.w;
     s.uiH = ui.h;
@@ -145,6 +146,7 @@ void VerbatimProcessor::setStateInformation (const void* data, int size)
     mix->setValueNotifyingHost (mix->convertTo0to1 (s.mix));
     macro->setValueNotifyingHost (macro->convertTo0to1 (s.macro));
     output->setValueNotifyingHost (output->convertTo0to1 (s.outputDb));
+    bypass->setValueNotifyingHost (s.bypass ? 1.0f : 0.0f); // VST3 validator: bypass persists with the state
     {
         std::lock_guard<std::mutex> lock (stateMutex);
         overrides = s.overrides;

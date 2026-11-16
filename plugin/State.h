@@ -13,6 +13,7 @@ struct PluginState
     std::string text;
     // Host parameter values, stored so a project reload restores them with the text.
     float mix = 100.0f, macro = 0.5f, outputDb = 0.0f;
+    bool bypass = false;
     vb::Overrides overrides;
     int uiW = 900, uiH = 620;
     bool advanced = false;

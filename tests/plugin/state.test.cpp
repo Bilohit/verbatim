@@ -73,12 +73,28 @@ TEST_CASE ("State JSON round trip keeps text and host params", "[state]")
     s.mix = 42.5f;
     s.macro = 0.25f;
     s.outputDb = -6.0f;
+    s.bypass = true;
     vbplugin::PluginState back;
     REQUIRE (vbplugin::fromJson (vbplugin::toJson (s), back));
     CHECK (back.text == s.text);
     CHECK (back.mix == s.mix);
     CHECK (back.macro == s.macro);
     CHECK (back.outputDb == s.outputDb);
+    CHECK (back.bypass);
+}
+
+TEST_CASE ("V3 bypass persists through the component state; program 0 has a name", "[V3]")
+{
+    JuceInit juce;
+    VerbatimProcessor p;
+    auto* bypass = p.getBypassParameter();
+    bypass->setValueNotifyingHost (1.0f);
+    juce::MemoryBlock blob;
+    p.getStateInformation (blob);
+    bypass->setValueNotifyingHost (0.0f);
+    p.setStateInformation (blob.getData(), static_cast<int> (blob.getSize()));
+    CHECK (bypass->getValue() == 1.0f);
+    CHECK (p.getProgramName (0).isNotEmpty());
 }
 
 TEST_CASE ("R5 state round trip renders bit identical", "[R5]")

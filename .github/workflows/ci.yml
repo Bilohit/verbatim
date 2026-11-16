@@ -23,13 +23,13 @@ jobs:
         working-directory: gui
         run: npx playwright test --reporter=line
 
-      - name: pluginval (strictness 5, 3 seeds)
+      - name: pluginval (strictness 10, 3 seeds)
         shell: bash
         run: |
           curl -sSfL -o pluginval.zip https://github.com/Tracktion/pluginval/releases/download/v1.0.4/pluginval_Windows.zip
           unzip -q pluginval.zip
           for seed in 1 2 3; do
-            ./pluginval.exe --strictness-level 5 --skip-gui-tests --seed $seed \
+            ./pluginval.exe --strictness-level 10 --skip-gui-tests --seed $seed \
               --validate build/Verbatim_artefacts/Release/VST3/Verbatim.vst3
           done
 
@@ -52,6 +52,15 @@ jobs:
             RANGE="$BEFORE..HEAD"
           fi
           python3 tools/check_golden.py "$RANGE"
+
+      - name: Steinberg VST3 validator (V3)
+        shell: bash
+        run: |
+          git clone -q --depth 1 --branch v3.7.14_build_55 https://github.com/steinbergmedia/vst3sdk.git vst3sdk
+          git -C vst3sdk submodule update --init --depth 1 base pluginterfaces public.sdk cmake
+          cmake -S vst3sdk -B vst3sdk/build -A x64 -DSMTG_ENABLE_VSTGUI_SUPPORT=OFF -DSMTG_ADD_VST3_PLUGINS_SAMPLES=OFF -DSMTG_ADD_VST3_HOSTING_SAMPLES=ON -DSMTG_CREATE_PLUGIN_LINK=OFF
+          cmake --build vst3sdk/build --config Release --target validator
+          vst3sdk/build/bin/Release/validator.exe build/Verbatim_artefacts/Release/VST3/Verbatim.vst3
 
   # Other compilers and OSes (docs/06-test-plan.md CI matrix): win-clangcl and linux-clang run core + dsp,
   # linux-gcc and macos-clang run core only.
