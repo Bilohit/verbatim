@@ -14,7 +14,6 @@ Sat::Sat (const vb::ModuleSpec& spec)
     shapeType = disc (spec.p[2], 4);
     biasDc = lin (spec.p[3], 0.0f, 0.25f);
     mix = lin (spec.mix, 0.5f, 1.0f);
-    gain = dbToGain (driveDb);
     trim = dbToGain (-0.5f * driveDb);
     tiltLow = dbToGain (-0.5f * toneDb);
     tiltHigh = dbToGain (0.5f * toneDb);
@@ -49,6 +48,10 @@ void Sat::prepare (double sampleRate, int maxBlock)
         ring[c].assign (static_cast<std::size_t> (std::max (latency, 1)), 0.0f);
         dryOut[c].assign (static_cast<std::size_t> (maxBlock), 0.0f);
     }
+    driveSmooth.prepare (sampleRate, 5.0);
+    mixSmooth.prepare (sampleRate, 5.0);
+    gainOs.assign (static_cast<std::size_t> (maxBlock), 1.0f);
+    mixRamp.assign (static_cast<std::size_t> (maxBlock), 0.0f);
     dcR = std::exp (-2.0 * pi * 5.0 / sampleRate);
     tiltA = 1.0 - std::exp (-2.0 * pi * 1000.0 / sampleRate);
     reset();
@@ -63,10 +66,16 @@ void Sat::reset()
         dcX1[c] = dcY1[c] = tiltLp[c] = 0.0;
     }
     ringPos = 0;
+    driveSmooth.reset();
+    mixSmooth.reset();
 }
 
-void Sat::process (float* L, float* R, int n, const ModCtx&)
+void Sat::process (float* L, float* R, int n, const ModCtx& ctx)
 {
+    const float driveTarget = std::clamp (driveDb + 6.0f * ctx.mod, 0.0f, 24.0f);
+    for (int i = 0; i < n; ++i)
+        gainOs[static_cast<std::size_t> (i)] = dbToGain (driveSmooth.next (driveTarget));
+    const float mixTarget = effectiveMix (mix, ctx);
     float* io[2] = { L, R };
     const int len = static_cast<int> (ring[0].size());
 
@@ -85,14 +94,17 @@ void Sat::process (float* L, float* R, int n, const ModCtx&)
 
     juce::dsp::AudioBlock<float> block (io, 2, static_cast<std::size_t> (n));
     auto up = os.processSamplesUp (block);
+    const std::size_t factor = up.getNumSamples() / static_cast<std::size_t> (n);
     for (std::size_t c = 0; c < up.getNumChannels(); ++c)
     {
         auto* x = up.getChannelPointer (c);
         for (std::size_t i = 0; i < up.getNumSamples(); ++i)
-            x[i] = shape (x[i] * gain + biasDc) - biasOut;
+            x[i] = shape (x[i] * gainOs[i / factor] + biasDc) - biasOut;
     }
     os.processSamplesDown (block);
 
+    for (int i = 0; i < n; ++i)
+        mixRamp[static_cast<std::size_t> (i)] = mixSmooth.next (mixTarget);
     for (int c = 0; c < 2; ++c)
     {
         for (int i = 0; i < n; ++i)
@@ -105,7 +117,7 @@ void Sat::process (float* L, float* R, int n, const ModCtx&)
             tiltLp[c] += tiltA * (y - tiltLp[c]);
             const float wet = static_cast<float> (tiltLp[c] * tiltLow + (y - tiltLp[c]) * tiltHigh) * trim;
             const float d = dryOut[c][static_cast<std::size_t> (i)];
-            io[c][i] = d + (wet - d) * mix;
+            io[c][i] = d + (wet - d) * mixRamp[static_cast<std::size_t> (i)];
         }
     }
 }

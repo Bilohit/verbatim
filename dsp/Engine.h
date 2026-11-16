@@ -30,6 +30,8 @@ public:
 
     void setMix (float mix01) { mixTarget.store (mix01); }
     void setOutputDb (float db) { outputDbTarget.store (db); }
+    void setMacro (float m01) { macroTarget.store (m01); }
+    void setMacroScalingEnabled (bool on) { macroScaling.store (on); } // test hook for D8
     void setBypass (bool b) { bypassTarget.store (b ? 1.0f : 0.0f); } // ramps to the delayed dry signal
 
     int latencySamples() const { return lFixed; }
@@ -64,9 +66,10 @@ private:
 
     std::vector<float> inL, inR, dryL, dryR, outA_L, outA_R, outB_L, outB_R, mixRamp, gainRamp, dryBufL, dryBufR;
     int dryPos = 0;
-    std::atomic<float> mixTarget { 1.0f }, outputDbTarget { 0.0f }, bypassTarget { 0.0f };
-    float mixCurrent = 1.0f, gainCurrent = 1.0f, bypassCurrent = 0.0f;
-    std::vector<float> bypassRamp;
+    std::atomic<float> mixTarget { 1.0f }, outputDbTarget { 0.0f }, bypassTarget { 0.0f }, macroTarget { 0.5f };
+    std::atomic<bool> macroScaling { true };
+    float mixCurrent = 1.0f, gainCurrent = 1.0f, bypassCurrent = 0.0f, macroCurrent = 0.5f;
+    std::vector<float> bypassRamp, macroRamp;
     std::atomic<int> nanTotal { 0 };
 };
 } // namespace vbdsp

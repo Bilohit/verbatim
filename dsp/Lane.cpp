@@ -68,6 +68,7 @@ void Lane::prepare (double sampleRate, int maxBlock)
 {
     for (auto& m : modules)
         m->prepare (sampleRate, maxBlock);
+    mod.prepare (spec, static_cast<int> (modules.size()), sampleRate);
 
     const juce::dsp::ProcessSpec ps { sampleRate, static_cast<juce::uint32> (maxBlock), 2 };
     const float fc = 200.0f * std::pow (4000.0f / 200.0f, static_cast<float> (spec.bandCenter) / 65535.0f);
@@ -125,6 +126,8 @@ void Lane::reset()
 {
     for (auto& m : modules)
         m->reset();
+    mod.reset();
+    gridPos = 0;
     bandHp.reset();
     bandLp.reset();
     dryDelay.clear();
@@ -143,12 +146,37 @@ void Lane::reset()
 
 void Lane::runModules (std::size_t from, std::size_t to, float* L, float* R, int n)
 {
-    const ModCtx ctx;
+    ModCtx ctx;
+    ctx.macro = cellMacro;
+    ctx.macroScaling = block->macroScaling;
+    ctx.bpm = block->bpm;
     for (std::size_t k = from; k < to; ++k)
+    {
+        ctx.mod = mod.valueFor (static_cast<int> (k));
         modules[k]->process (L, R, n, ctx);
+    }
 }
 
-void Lane::processModules (float* outL, float* outR, int n) // audio-thread
+void Lane::processModules (float* L, float* R, int n, int offset) // audio-thread
+{
+    // Cut the call at 32-sample control ticks counted from chain start, so modules see the same
+    // context sequence for any host block size (docs/02-spec.md C6).
+    for (int i = 0; i < n;)
+    {
+        if (gridPos == 0)
+        {
+            cellMacro = block->macro[offset + i];
+            mod.tick (block->bpm, cellMacro, block->macroScaling);
+        }
+        const int c = std::min (n - i, CONTROL_TICK - gridPos);
+        mod.trackInput (rawL.data() + offset + i, rawR.data() + offset + i, c);
+        processModulesCell (L + i, R + i, c);
+        gridPos = (gridPos + c) % CONTROL_TICK;
+        i += c;
+    }
+}
+
+void Lane::processModulesCell (float* outL, float* outR, int n) // audio-thread
 {
     if (splitAt == 0)
     {
@@ -171,8 +199,9 @@ void Lane::processModules (float* outL, float* outR, int n) // audio-thread
     }
 }
 
-void Lane::process (const float* inL, const float* inR, float* outL, float* outR, int n) // audio-thread
+void Lane::process (const float* inL, const float* inR, float* outL, float* outR, int n, const BlockCtx& ctx) // audio-thread
 {
+    block = &ctx;
     std::copy (inL, inL + n, rawL.begin());
     std::copy (inR, inR + n, rawR.begin());
     std::copy (inL, inL + n, outL);
@@ -191,7 +220,7 @@ void Lane::process (const float* inL, const float* inR, float* outL, float* outR
 
     if (fbGain == 0.0f)
     {
-        processModules (outL, outR, n);
+        processModules (outL, outR, n, 0);
     }
     else
     {
@@ -223,7 +252,7 @@ void Lane::process (const float* inL, const float* inR, float* outL, float* outR
                 for (int ch = 0; ch < 2; ++ch)
                     dst[ch][i] += std::tanh (static_cast<float> (filtered[ch] * fbGain * g));
             }
-            processModules (L, R, c);
+            processModules (L, R, c, start);
             for (int i = 0; i < c; ++i)
             {
                 const auto p = static_cast<std::size_t> ((fbPos + i) % fbLen);

@@ -1,4 +1,5 @@
 #pragma once
+#include "Mod.h"
 #include "Module.h"
 
 #include <juce_dsp/juce_dsp.h>
@@ -18,8 +19,16 @@ public:
     void prepare (double sampleRate, int maxBlock); // allocates; latencySamples() is valid afterwards
     void setPad (int samples);                      // allocates; delay added after the lane stages
     void reset();
+    // Per-block values from the engine: smoothed Macro per sample, tempo.
+    struct BlockCtx
+    {
+        const float* macro = nullptr;
+        bool macroScaling = true;
+        double bpm = 120.0;
+    };
+
     // audio-thread
-    void process (const float* inL, const float* inR, float* outL, float* outR, int n);
+    void process (const float* inL, const float* inR, float* outL, float* outR, int n, const BlockCtx& ctx);
 
     int latencySamples() const; // module latency (split: the slower half)
     bool takesPreviousLane() const { return spec.chain != 0; }
@@ -37,11 +46,16 @@ private:
     };
 
     void runModules (std::size_t from, std::size_t to, float* L, float* R, int n);
-    void processModules (float* L, float* R, int n); // serial or split
+    void processModules (float* L, float* R, int n, int offset); // on the control grid; offset into the block
+    void processModulesCell (float* L, float* R, int n);         // serial or split, one ctx
     int latencyOf (std::size_t from, std::size_t to) const;
 
     vb::LaneSpec spec;
     std::vector<std::unique_ptr<Module>> modules;
+    LaneMod mod;
+    int gridPos = 0;      // samples since the last control tick
+    float cellMacro = 0.5f;
+    const BlockCtx* block = nullptr;
     std::size_t splitAt = 0; // 0 = serial; else modules [0, splitAt) and [splitAt, n) run in parallel
 
     juce::dsp::StateVariableTPTFilter<float> bandHp, bandLp;

@@ -20,7 +20,7 @@ struct Chain
 
     // Output: dry*(1-mix) + wet*mix, or dry when there are no lanes. Returns NaN-guard events.
     int render (const float* inL, const float* inR, const float* dryL, const float* dryR, const float* mix,
-                float* oL, float* oR, int n) // audio-thread
+                float* oL, float* oR, int n, const Lane::BlockCtx& ctx) // audio-thread
     {
         if (lanes.empty())
         {
@@ -38,7 +38,7 @@ struct Chain
             const float* srcL = chained ? outL[i - 1].data() : inL;
             const float* srcR = chained ? outR[i - 1].data() : inR;
             const int before = lane.nanCount();
-            lane.process (srcL, srcR, outL[i].data(), outR[i].data(), n);
+            lane.process (srcL, srcR, outL[i].data(), outR[i].data(), n, ctx);
             nans += lane.nanCount() - before;
             if (summed[i])
                 for (std::size_t k = 0; k < static_cast<std::size_t> (n); ++k)
@@ -112,7 +112,7 @@ void Engine::prepare (double sr, int block)
     lFixed = 8 * satLatencySamples();
 
     const auto m = static_cast<std::size_t> (block);
-    for (auto* v : { &inL, &inR, &dryL, &dryR, &outA_L, &outA_R, &outB_L, &outB_R, &mixRamp, &gainRamp, &bypassRamp })
+    for (auto* v : { &inL, &inR, &dryL, &dryR, &outA_L, &outA_R, &outB_L, &outB_R, &mixRamp, &gainRamp, &bypassRamp, &macroRamp })
         v->assign (m, 0.0f);
     dryBufL.assign (static_cast<std::size_t> (std::max (lFixed, 1)), 0.0f);
     dryBufR.assign (static_cast<std::size_t> (std::max (lFixed, 1)), 0.0f);
@@ -130,6 +130,7 @@ void Engine::prepare (double sr, int block)
     mixCurrent = mixTarget.load();
     gainCurrent = dbToGain (outputDbTarget.load());
     bypassCurrent = bypassTarget.load();
+    macroCurrent = macroTarget.load();
 }
 
 void Engine::setSpec (const vb::ChainSpec& spec)
@@ -167,6 +168,7 @@ void Engine::reset()
     mixCurrent = mixTarget.load();
     gainCurrent = dbToGain (outputDbTarget.load());
     bypassCurrent = bypassTarget.load();
+    macroCurrent = macroTarget.load();
 }
 
 void Engine::process (float* L, float* R, int n) // audio-thread
@@ -207,6 +209,8 @@ void Engine::process (float* L, float* R, int n) // audio-thread
     const float gainT = dbToGain (outputDbTarget.load (std::memory_order_relaxed));
     const float steps = static_cast<float> (0.02 * sampleRate);
     const float byT = bypassTarget.load (std::memory_order_relaxed);
+    const float macT = macroTarget.load (std::memory_order_relaxed);
+    const float macStep = (macT - macroCurrent) / steps;
     const float mixStep = (mixT - mixCurrent) / steps, gainStep = (gainT - gainCurrent) / steps, byStep = (byT - bypassCurrent) / steps;
     for (int i = 0; i < n; ++i)
     {
@@ -217,12 +221,17 @@ void Engine::process (float* L, float* R, int n) // audio-thread
         mixRamp[k] = mixCurrent;
         gainRamp[k] = gainCurrent;
         bypassRamp[k] = bypassCurrent;
+        macroCurrent = std::abs (macT - macroCurrent) <= std::abs (macStep) ? macT : macroCurrent + macStep;
+        macroRamp[k] = macroCurrent;
     }
 
-    int nans = active->render (inL.data(), inR.data(), dryL.data(), dryR.data(), mixRamp.data(), outA_L.data(), outA_R.data(), n);
+    Lane::BlockCtx ctx;
+    ctx.macro = macroRamp.data();
+    ctx.macroScaling = macroScaling.load (std::memory_order_relaxed);
+    int nans = active->render (inL.data(), inR.data(), dryL.data(), dryR.data(), mixRamp.data(), outA_L.data(), outA_R.data(), n, ctx);
     if (fading.load (std::memory_order_relaxed))
     {
-        nans += old->render (inL.data(), inR.data(), dryL.data(), dryR.data(), mixRamp.data(), outB_L.data(), outB_R.data(), n);
+        nans += old->render (inL.data(), inR.data(), dryL.data(), dryR.data(), mixRamp.data(), outB_L.data(), outB_R.data(), n, ctx);
         // The new chain first runs L_FIXED samples at weight 0 so its empty delay lines fill
         // before it becomes audible; then a linear 30 ms crossfade.
         for (int i = 0; i < n; ++i)

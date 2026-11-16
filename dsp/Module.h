@@ -14,12 +14,41 @@ inline float expMap (std::uint16_t u, float lo, float hi) { return lo * std::pow
 inline int disc (std::uint16_t u, int n) { return static_cast<int> ((static_cast<std::uint32_t> (u) * static_cast<std::uint32_t> (n)) >> 16); }
 inline float dbToGain (float db) { return std::pow (10.0f, db / 20.0f); }
 
-// Per-block context for a module. Modulation and macro arrive with T11, tempo with T12.
+// Context for one module call: constant over one 32-sample control cell.
 struct ModCtx
 {
-    float mod = 0.0f;
+    float mod = 0.0f;          // M in [-1, 1], already scaled by Macro
     float macro = 0.5f;
+    bool macroScaling = true;  // false only in the D8 reference build
     double bpm = 120.0;
+};
+
+// Effective module mix under Macro (docs/03-dsp-catalog.md 1.4). Macro 0.5 returns mix unchanged.
+inline float effectiveMix (float mix, const ModCtx& ctx)
+{
+    if (! ctx.macroScaling)
+        return mix;
+    const float m = ctx.macro;
+    return m <= 0.5f ? mix * (2.0f * m) : mix + (1.0f - mix) * (2.0f * m - 1.0f) * 0.75f;
+}
+
+// Per-sample one-pole smoother; starts at its first target, so a constant target is exact.
+struct Smooth
+{
+    float cur = 0.0f, coef = 1.0f;
+    bool started = false;
+    void prepare (double sampleRate, double ms) { coef = static_cast<float> (1.0 - std::exp (-1.0 / (ms * 0.001 * sampleRate))); started = false; }
+    void reset() { started = false; }
+    float next (float target)
+    {
+        if (! started)
+        {
+            cur = target;
+            started = true;
+        }
+        cur += coef * (target - cur);
+        return cur;
+    }
 };
 
 class Module

@@ -25,5 +25,6 @@ private:
     int size = 0, writePos = 0;
     double lpA = 0, hpA = 0, lp[2] {}, hp[2] {};
     double wowPhase = 0, wowInc = 0;
+    Smooth timeGlide, mixSmooth;
 };
 } // namespace vbdsp

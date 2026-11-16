@@ -28,6 +28,8 @@ void Delay::prepare (double sampleRate, int)
     lpA = 1.0 - std::exp (-2.0 * pi * toneHz / sr);
     hpA = 1.0 - std::exp (-2.0 * pi * 60.0 / sr);
     wowInc = 2.0 * pi * 0.7 / sr;
+    timeGlide.prepare (sr, 50.0);
+    mixSmooth.prepare (sr, 5.0);
     reset();
 }
 
@@ -39,6 +41,8 @@ void Delay::reset()
     for (int c = 0; c < 2; ++c)
         lp[c] = hp[c] = 0.0;
     wowPhase = 0.0;
+    timeGlide.reset();
+    mixSmooth.reset();
 }
 
 float Delay::readLinear (const std::vector<float>& l, double delay) const
@@ -67,12 +71,14 @@ float Delay::readLagrange (const std::vector<float>& l, double delay) const
     return static_cast<float> (c0 * ym1 + c1 * y0 + c2 * y1 + c3 * y2);
 }
 
-void Delay::process (float* L, float* R, int n, const ModCtx&)
+void Delay::process (float* L, float* R, int n, const ModCtx& ctx)
 {
-    const double baseDelay = std::fmin (timeMs, maxDelayMs) * 0.001 * sr;
+    const float targetDelay = static_cast<float> (std::fmin (timeMs * (1.0f + 0.02f * ctx.mod), maxDelayMs) * 0.001 * sr);
+    const float mixTarget = effectiveMix (mix, ctx);
     for (int i = 0; i < n; ++i)
     {
-        double delay = baseDelay;
+        double delay = timeGlide.next (targetDelay);
+        const float m = mixSmooth.next (mixTarget);
         if (mode == 2)
         {
             delay *= 1.0 + 0.003 * std::sin (wowPhase);
@@ -113,8 +119,8 @@ void Delay::process (float* L, float* R, int n, const ModCtx&)
         line[1][static_cast<std::size_t> (writePos)] = wR;
         writePos = writePos + 1 == size ? 0 : writePos + 1;
 
-        L[i] = inL + (tap[0] - inL) * mix;
-        R[i] = inR + (tap[1] - inR) * mix;
+        L[i] = inL + (tap[0] - inL) * m;
+        R[i] = inR + (tap[1] - inR) * m;
     }
 }
 } // namespace vbdsp
