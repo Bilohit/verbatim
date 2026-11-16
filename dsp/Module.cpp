@@ -7,6 +7,7 @@
 #include "fx/Crush.h"
 #include "fx/Delay.h"
 #include "fx/Filter.h"
+#include "fx/Grain.h"
 #include "fx/Phaser.h"
 #include "fx/Pitch.h"
 #include "fx/Sat.h"
@@ -17,14 +18,6 @@ namespace vbdsp
 {
 namespace
 {
-// Stand-in for effects not implemented yet (tasks T13-T19).
-class PassThrough final : public Module
-{
-public:
-    void prepare (double, int) override {}
-    void reset() override {}
-    void process (float*, float*, int, const ModCtx&) override {}
-};
 } // namespace
 
 std::unique_ptr<Module> makeModule (const vb::ModuleSpec& spec, std::uint64_t laneSeed, int slot)
@@ -46,7 +39,8 @@ std::unique_ptr<Module> makeModule (const vb::ModuleSpec& spec, std::uint64_t la
         case vb::COMB:   return std::make_unique<Comb> (spec);
         case vb::FREEZE: return std::make_unique<Freeze> (spec);
         case vb::PITCH:  return std::make_unique<Pitch> (spec);
-        default:        return std::make_unique<PassThrough>();
+        case vb::GRAIN:  return std::make_unique<Grain> (spec, laneSeed, slot);
+        default:        return std::make_unique<Sat> (spec); // unreachable: all 16 IDs handled above
     }
 }
 

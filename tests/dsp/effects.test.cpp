@@ -6,7 +6,10 @@
 
 #include "Catalog.h"
 #include "Engine.h"
+#include "Generate.h"
 #include "Module.h"
+
+#include <cstring>
 
 #include <chrono>
 #include <cmath>
@@ -30,6 +33,7 @@ const std::vector<Fx> implemented = {
     { vb::VERB, 6.0 }, { vb::COMP, 1.0 },
     { vb::TREM, 1.0 }, { vb::WOW, 1.0 }, { vb::RING, 1.0 },
     { vb::COMB, 2.0 }, { vb::FREEZE, 3.0 }, { vb::PITCH, 2.0 },
+    { vb::GRAIN, 3.0 },
 };
 
 vb::ModuleSpec mid (std::uint8_t type)
@@ -208,4 +212,26 @@ TEST_CASE ("PITCH shifts a sine by the interval", "[effects]")
         return re * re + im * im;
     };
     CHECK (power (1000.0) > 100.0 * power (500.0));
+}
+
+TEST_CASE ("R1 and RT2 with a GRAIN seed: bit identical, no allocation on the audio thread", "[R1][RT2]")
+{
+    const auto spec = vb::generate ("dark!!"); // SAT, GRAIN, FLANGE, CRUSH
+    REQUIRE (spec.lanes[0].slots[1].type == vb::GRAIN);
+    const auto in = pinkNoise (static_cast<std::size_t> (10 * SR), 34, -18.0);
+    std::vector<float> first;
+    for (int run = 0; run < 2; ++run)
+    {
+        vbdsp::Engine e;
+        e.setSpec (spec);
+        e.prepare (SR, BLOCK);
+        e.reset();
+        resetAllocationCount();
+        const auto out = render (e, in, in, BLOCK);
+        CHECK (allocationsInAudio() == 0);
+        if (run == 0)
+            first = out.L;
+        else
+            CHECK (std::memcmp (first.data(), out.L.data(), first.size() * sizeof (float)) == 0);
+    }
 }
