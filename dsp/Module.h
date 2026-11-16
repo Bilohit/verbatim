@@ -4,6 +4,7 @@
 
 #include <cmath>
 #include <cstdint>
+#include <limits>
 #include <memory>
 
 namespace vbdsp
@@ -42,6 +43,23 @@ inline float effectiveMix (float mix, const ModCtx& ctx)
     return m <= 0.5f ? mix * (2.0f * m) : mix + (1.0f - mix) * (2.0f * m - 1.0f) * 0.75f;
 }
 
+// Caches an expensive function of a smoothed value: recomputes only when the value changes (P1, T20).
+struct Memo
+{
+    float key = std::numeric_limits<float>::quiet_NaN();
+    double value = 0.0;
+    template <typename F>
+    double operator() (float k, F&& f)
+    {
+        if (k != key)
+        {
+            key = k;
+            value = f (k);
+        }
+        return value;
+    }
+};
+
 // Per-sample one-pole smoother; starts at its first target, so a constant target is exact.
 struct Smooth
 {
@@ -71,6 +89,8 @@ public:
     virtual int latencySamples() const { return 0; }
     // Time until internal delay lines give continuous output after reset; a new chain stays silent this long.
     virtual int warmupSamples() const { return 0; }
+
+    float trim = 1.0f; // constant wet-path output trim from dsp/Trims.h (set by makeModule)
 };
 
 // Builds the module for a spec. Effects not yet implemented are pass-through modules.

@@ -24,5 +24,6 @@ private:
     std::vector<float> line[2];
     float last[2] {};
     Smooth cents, mixSmooth;
+    Memo ratioMemo;
 };
 } // namespace vbdsp

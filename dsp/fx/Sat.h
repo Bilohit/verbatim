@@ -23,10 +23,11 @@ private:
     juce::dsp::Oversampling<float> os { 2, oversamplingStages, juce::dsp::Oversampling<float>::filterHalfBandFIREquiripple, true, true };
     int latency = 0;
     int shapeType = 0;
-    float driveDb = 0, biasDc = 0, biasOut = 0, mix = 1, trim = 1, tiltLow = 1, tiltHigh = 1;
+    float driveDb = 0, biasDc = 0, biasOut = 0, mix = 1, driveTrim = 1, tiltLow = 1, tiltHigh = 1;
     double dcR = 0, tiltA = 0;
     double dcX1[2] {}, dcY1[2] {}, tiltLp[2] {};
     Smooth driveSmooth, mixSmooth;
+    Memo gainMemo;
     std::vector<float> gainOs, mixRamp; // per-sample drive gain and mix for the current block
     std::vector<float> ring[2];    // delays the dry path by the oversampler latency
     std::vector<float> dryOut[2];  // delayed dry for the current block

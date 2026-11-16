@@ -56,5 +56,6 @@ private:
     int wave = 0;
     double sr = 48000.0, phase = 0.0;
     Smooth octaves, mixSmooth;
+    Memo freqMemo;
 };
 } // namespace vbdsp

@@ -42,9 +42,12 @@ if(VERBATIM_BUILD_DSP)
         dsp/mod.test.cpp
         dsp/timebase.test.cpp
         dsp/effects.test.cpp
-        dsp/filter.test.cpp)
+        dsp/filter.test.cpp
+        dsp/calibration.test.cpp
+        dsp/fuzz.test.cpp)
     target_include_directories(verbatim_dsp_tests PRIVATE ${PROJECT_SOURCE_DIR} ${PROJECT_SOURCE_DIR}/dsp)
     target_compile_definitions(verbatim_dsp_tests PRIVATE
+        VERBATIM_GOLDEN_DIR="${CMAKE_CURRENT_SOURCE_DIR}/golden"
         JUCE_STANDALONE_APPLICATION=1 JUCE_USE_CURL=0 JUCE_WEB_BROWSER=0)
     target_link_libraries(verbatim_dsp_tests PRIVATE
         verbatim_core juce::juce_dsp juce::juce_audio_basics juce::juce_recommended_config_flags

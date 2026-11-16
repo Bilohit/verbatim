@@ -13,6 +13,7 @@
 
 #include <chrono>
 #include <cmath>
+#include <cstdio>
 
 using namespace harness;
 
@@ -126,9 +127,15 @@ TEST_CASE ("D5 denormals: 60 s of 1e-30 noise costs at most 20 % more than norma
             const auto secs = std::chrono::duration<double> (std::chrono::steady_clock::now() - t0).count();
             return secs / static_cast<double> (in.size());
         };
-        const double base = std::min (timeOf (normal), timeOf (normal));
-        const double denorm = std::min (timeOf (tiny), timeOf (tiny));
+        // Minimum of nine interleaved runs each: robust against scheduler and clock noise.
+        double base = 1e9, denorm = 1e9;
+        for (int r = 0; r < 9; ++r)
+        {
+            base = std::min (base, timeOf (normal));
+            denorm = std::min (denorm, timeOf (tiny));
+        }
         INFO ("per-sample time normal " << base << " tiny " << denorm);
+        std::printf ("D5 %-6s ratio %.2f  %.1f ns/sample\n", vb::catalog[fx.type].name, denorm / base, base * 1e9);
         CHECK (denorm <= base * 1.2);
     }
 }

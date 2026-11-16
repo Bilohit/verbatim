@@ -39,8 +39,8 @@ void Comp::process (float* L, float* R, int n, const ModCtx& ctx)
     {
         const float w = mixSmooth.next (mixTarget);
         const float l = comp.processSample (0, L[i]) * makeup, r = comp.processSample (1, R[i]) * makeup;
-        L[i] += (l - L[i]) * w;
-        R[i] += (r - R[i]) * w;
+        L[i] += (l * trim - L[i]) * w;
+        R[i] += (r * trim - R[i]) * w;
     }
 }
 } // namespace vbdsp

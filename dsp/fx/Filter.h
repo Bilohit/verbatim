@@ -19,5 +19,6 @@ private:
     double sr = 48000.0;
     double s1[2][2] {}, s2[2][2] {}; // [stage][channel]
     Smooth octaves, mixSmooth;
+    Memo gMemo;
 };
 } // namespace vbdsp

@@ -21,6 +21,7 @@ private:
     std::vector<float> line[2];
     int size = 0, writePos = 0;
     Smooth cents, mixSmooth;
+    Memo hzMemo;
 };
 
 // FREEZE (ID 9): captures a slice every `period` lengths and replays it `repeats` times (5 ms windows).

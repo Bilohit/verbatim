@@ -220,7 +220,7 @@ void Lane::process (const float* inL, const float* inR, float* outL, float* outR
     if (spec.band != 0)
         for (int c = 0; c < 2; ++c)
             for (int i = 0; i < n; ++i)
-                io[c][i] = bandLp.processSample (c, bandHp.processSample (c, io[c][i]));
+                io[c][i] = 2.0f * bandLp.processSample (c, bandHp.processSample (c, io[c][i])); // +6 dB make-up (T20, S1)
 
     if (spec.drive != 0)
         for (int c = 0; c < 2; ++c)

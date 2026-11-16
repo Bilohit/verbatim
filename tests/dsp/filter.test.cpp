@@ -7,6 +7,7 @@
 
 #include "Catalog.h"
 #include "Module.h"
+#include "Trims.h"
 
 #include <cmath>
 
@@ -32,12 +33,19 @@ double cutoffHz (int mode, std::uint16_t u)
     return lo * std::pow (hi / lo, u / 65535.0);
 }
 
+double stageDb (int mode, double w, double q)
+{
+    const double den = std::sqrt ((1 - w * w) * (1 - w * w) + (w / q) * (w / q));
+    const double mag = mode == 0 ? 1.0 / den : mode == 1 ? w * w / den : mode == 2 ? (w / q) / den : std::abs (1 - w * w) / den;
+    return 20.0 * std::log10 (std::max (mag, 1e-12));
+}
+
+// 24 dB mode = a stage at Q followed by a Butterworth stage (T20). Band-pass carries +13 dB make-up (T20).
 double theoryDb (int mode, double f, double fc, double q, int stages)
 {
     const double w = std::tan (pi * f / SR) / std::tan (pi * fc / SR);
-    const double den = std::sqrt ((1 - w * w) * (1 - w * w) + (w / q) * (w / q));
-    double mag = mode == 0 ? 1.0 / den : mode == 1 ? w * w / den : mode == 2 ? (w / q) / den : std::abs (1 - w * w) / den;
-    return stages * 20.0 * std::log10 (std::max (mag, 1e-12));
+    const double db = stageDb (mode, w, q) + (stages == 2 ? stageDb (mode, w, 1.0 / std::sqrt (2.0)) : 0.0);
+    return db + (mode == 2 ? 13.0 : 0.0);
 }
 
 // Steady-state gain of the FILTER module at full mix for a sine at f.
@@ -54,7 +62,8 @@ double measuredDb (const vb::ModuleSpec& spec, double f)
     for (std::size_t s = 0; s < n; s += 512)
         m->process (L.data() + s, R.data() + s, static_cast<int> (std::min<std::size_t> (512, n - s)), ctx);
     const auto from = n / 2;
-    return toDb (rms (L.data() + from, n - from) / rms (in.data() + from, n - from));
+    // Relative to the constant FILTER output trim (dsp/Trims.h): D3 checks the response shape.
+    return toDb (rms (L.data() + from, n - from) / rms (in.data() + from, n - from)) - vbdsp::trimDb[vb::FILTER];
 }
 
 vb::ModuleSpec filter (int mode, std::uint16_t cutU, std::uint16_t qU, int slope)

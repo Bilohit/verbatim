@@ -58,8 +58,8 @@ void Verb::process (float* L, float* R, int n, const ModCtx& ctx)
     {
         const float w = mixSmooth.next (mixTarget);
         const auto k = static_cast<std::size_t> (i);
-        L[i] = dryL[k] + (L[i] - dryL[k]) * w;
-        R[i] = dryR[k] + (R[i] - dryR[k]) * w;
+        L[i] = dryL[k] + (L[i] * trim - dryL[k]) * w;
+        R[i] = dryR[k] + (R[i] * trim - dryR[k]) * w;
     }
 }
 } // namespace vbdsp

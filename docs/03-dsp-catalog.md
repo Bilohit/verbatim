@@ -24,7 +24,7 @@ Effect IDs, weights, param order and tags are part of grammar v1 (frozen, `02-sp
 | Stage | Active when | Definition |
 |---|---|---|
 | Input | always | Plugin input, or previous lane's output when `chain = 1` and lane index > 0. |
-| Band | `band = 1` | Band-pass of the lane input: 12 dB/oct HP at `fc / 2.4` and 12 dB/oct LP at `fc · 2.4`, `fc = exp(200, 4000)` of `bandCenter`. |
+| Band | `band = 1` | Band-pass of the lane input: 12 dB/oct HP at `fc / 2.4` and 12 dB/oct LP at `fc · 2.4`, `fc = exp(200, 4000)` of `bandCenter`. Output +6 dB make-up (T20: band-limited lanes fell under the S1 floor). |
 | Drive | `drive > 0` | `y = tanh(x · g) / g^0.5`, `g = 10^(4·drive / 20)`. |
 | Feedback in | `feedback > 0` | Adds the feedback tap (below). |
 | Modules | always | Serial. If `split = 1` and ≥ 2 modules: modules `0 .. ceil(n/2)−1` and the rest run in parallel from the same input, the lower-latency half delayed to match the other, outputs summed × 0.707. Zero modules: pass. |
@@ -102,7 +102,7 @@ Note length `T = (4 / timeDiv)` beats at host tempo (120 BPM if unknown). Used b
 | 2 FILTER | p0 cutoff | TONE + | by mode: LP `exp(200, 12000)`, HP `exp(40, 2000)`, BP and notch `exp(150, 6000)` Hz | Mod range ±2 octaves, clamped 20 Hz..0.45·fs. |
 | | p1 reso | | Q `exp(0.5, 8)` | |
 | | p2 mode | | `disc(4)`: LP, HP, BP, notch | |
-| | p3 slope | | `disc(2)`: 12, 24 dB/oct | TPT state-variable filter (`juce::dsp::StateVariableTPTFilter`), two in series for 24. |
+| | p3 slope | | `disc(2)`: 12, 24 dB/oct | TPT state-variable filter (hand-rolled, same algorithm as `juce::dsp::StateVariableTPTFilter`, which has no notch; T13). 24 dB = the Q stage followed by a Butterworth stage (T20: two Q stages peaked at +34 dB and broke S1). Band-pass output carries a fixed +13 dB make-up (T20, D12). |
 | | mix | DEPTH + | `lin(0.7, 1.0)` | |
 | 3 DELAY | p0 time | RATE − | `exp(30, 900)` ms, or `T` (§1.3), max 2000 ms | Mod range ±2 % (tape wobble), 50 ms glide on change. |
 | | p1 feedback | TAIL + | `lin(0, 0.8)` | `tanh` in the loop. |
@@ -172,6 +172,6 @@ Note length `T = (4 / timeDiv)` beats at host tempo (120 BPM if unknown). Used b
 
 | Item | Rule |
 |---|---|
-| Per-effect trim | Each effect has one constant output trim (dB) chosen so that, at `u = 32768` for all params and −18 dBFS RMS pink noise in, output RMS is −18 ± 3 dBFS. Stored in one table `dsp/Trims.h`. Set in task T20. |
+| Per-effect trim | Each effect has one constant output trim (dB) chosen so that, at `u = 32768` for all params and −18 dBFS RMS pink noise in, output RMS is −18 ± 3 dBFS. Stored in one table `dsp/Trims.h`, applied to the wet path so Macro 0 stays exactly dry. Set in task T20 to centre each effect on −18 dBFS, capped at +6 dB (VERB +4.5, PHASER and FLANGE 0) so max-parameter peaks stay inside D4/F3: SAT −4.9, CRUSH +0.9, FILTER +0.5, DELAY +6, VERB +4.5, CHORUS +5.1, PHASER 0, TREM +2.7, WOW +1.4, FREEZE +2, COMB +0.2, RING +6, PITCH +6, GRAIN +10, COMP −3.6, FLANGE 0. |
 | Seed space | Test S1 (`02-spec.md` §7) must pass with the trims in place. If a seed fails, narrow that effect's range here; do not special-case seeds. |
 | Mod ranges | "Mod range" is the excursion at `M = ±1`. The modulated value is clamped to the param's mapped range, except FILTER cutoff which is clamped as stated. |

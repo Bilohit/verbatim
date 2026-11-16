@@ -50,7 +50,7 @@ void Pitch::process (float* L, float* R, int n, const ModCtx& ctx)
     for (int i = 0; i < n; ++i)
     {
         // Mod range +-10 cents on the detune.
-        const double ratio = std::pow (2.0, (semitones + cents.next (detuneCents + 10.0f * ctx.mod) / 100.0) / 12.0);
+        const double ratio = ratioMemo (cents.next (detuneCents + 10.0f * ctx.mod), [this] (float c) { return std::pow (2.0, (semitones + c / 100.0) / 12.0); });
         phase += (1.0 - ratio) / w; // tap delay = phase * window; shrinks when shifting up
         phase -= std::floor (phase);
         const float m = mixSmooth.next (mixTarget);
@@ -72,7 +72,7 @@ void Pitch::process (float* L, float* R, int n, const ModCtx& ctx)
                 y += (a + f * (b - a)) * s * s; // sin^2 windows of the two taps sum to 1
             }
             last[c] = static_cast<float> (y);
-            io[c][i] += (static_cast<float> (y) - io[c][i]) * m;
+            io[c][i] += (static_cast<float> (y) * trim - io[c][i]) * m;
         }
         writePos = writePos + 1 == size ? 0 : writePos + 1;
     }

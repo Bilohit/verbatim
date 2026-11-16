@@ -100,8 +100,8 @@ void Grain::process (float* L, float* R, int n, const ModCtx& ctx)
                 v.active = false;
         }
         const float m = mixSmooth.next (mixTarget);
-        L[i] += (static_cast<float> (outL * norm) - L[i]) * m;
-        R[i] += (static_cast<float> (outR * norm) - R[i]) * m;
+        L[i] += (static_cast<float> (outL * norm) * trim - L[i]) * m;
+        R[i] += (static_cast<float> (outR * norm) * trim - R[i]) * m;
         writePos = writePos + 1 == size ? 0 : writePos + 1;
     }
 }

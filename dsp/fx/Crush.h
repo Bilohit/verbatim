@@ -20,5 +20,6 @@ private:
     float held[2] {};
     vb::SplitMix64 rng { 0 };
     Smooth octaves, mixSmooth;
+    Memo rateMemo;
 };
 } // namespace vbdsp

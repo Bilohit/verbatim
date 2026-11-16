@@ -98,6 +98,8 @@ void Delay::process (float* L, float* R, int n, const ModCtx& ctx)
         {
             lp[c] += lpA * (tap[c] - lp[c]);
             hp[c] += hpA * (lp[c] - hp[c]);
+            if (std::abs (lp[c]) < 1e-15 && std::abs (hp[c]) < 1e-15)
+                lp[c] = hp[c] = 0.0; // decaying loop states: keep them out of slow tiny-value paths (D5)
             double s = lp[c] - hp[c];
             if (mode == 2)
                 s = std::tanh (1.5 * s) / 1.5;
@@ -120,8 +122,8 @@ void Delay::process (float* L, float* R, int n, const ModCtx& ctx)
         line[1][static_cast<std::size_t> (writePos)] = wR;
         writePos = writePos + 1 == size ? 0 : writePos + 1;
 
-        L[i] = inL + (tap[0] - inL) * m;
-        R[i] = inR + (tap[1] - inR) * m;
+        L[i] = inL + (tap[0] * trim - inL) * m;
+        R[i] = inR + (tap[1] * trim - inR) * m;
     }
 }
 } // namespace vbdsp

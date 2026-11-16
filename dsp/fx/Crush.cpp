@@ -38,7 +38,7 @@ void Crush::process (float* L, float* R, int n, const ModCtx& ctx)
     for (int i = 0; i < n; ++i)
     {
         // Mod range +-1 octave on the hold rate, clamped to the mapped range.
-        const double rate = std::clamp (rateHz * std::pow (2.0, static_cast<double> (octaves.next (ctx.mod))), 2000.0, 24000.0);
+        const double rate = rateMemo (octaves.next (ctx.mod), [this] (float oct) { return std::clamp (rateHz * std::pow (2.0, static_cast<double> (oct)), 2000.0, 24000.0); });
         holdLeft -= 1.0;
         if (holdLeft <= 0.0)
         {
@@ -49,8 +49,8 @@ void Crush::process (float* L, float* R, int n, const ModCtx& ctx)
         }
         const float m = mixSmooth.next (mixTarget);
         const float wetL = std::round (held[0] / step) * step, wetR = std::round (held[1] / step) * step;
-        L[i] += (wetL - L[i]) * m;
-        R[i] += (wetR - R[i]) * m;
+        L[i] += (wetL * trim - L[i]) * m;
+        R[i] += (wetR * trim - R[i]) * m;
     }
 }
 } // namespace vbdsp

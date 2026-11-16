@@ -66,8 +66,8 @@ void Trem::process (float* L, float* R, int n, const ModCtx& ctx)
         const double sR = s * (1.0 - 2.0 * pan); // pan 1: right channel in opposite phase
         const float gL = static_cast<float> (1.0 - d * (0.5 + 0.5 * s));
         const float gR = static_cast<float> (1.0 - d * (0.5 + 0.5 * sR));
-        L[i] += (L[i] * gL - L[i]) * m;
-        R[i] += (R[i] * gR - R[i]) * m;
+        L[i] += (L[i] * gL * trim - L[i]) * m;
+        R[i] += (R[i] * gR * trim - R[i]) * m;
     }
 }
 
@@ -138,7 +138,7 @@ void Wow::process (float* L, float* R, int n, const ModCtx& ctx)
             const double y = -d * (d - 1) * (d - 2) / 6.0 * at (-1) + (d + 1) * (d - 1) * (d - 2) / 2.0 * at (0)
                            - (d + 1) * d * (d - 2) / 2.0 * at (1) + (d + 1) * d * (d - 1) / 6.0 * at (2);
             lp[c] += lpA * (y - lp[c]);
-            io[c][i] += (static_cast<float> (lp[c]) - io[c][i]) * m;
+            io[c][i] += (static_cast<float> (lp[c]) * trim - io[c][i]) * m;
         }
         writePos = writePos + 1 == size ? 0 : writePos + 1;
     }
@@ -173,13 +173,13 @@ void Ring::process (float* L, float* R, int n, const ModCtx& ctx)
     for (int i = 0; i < n; ++i)
     {
         // Mod range +-1 octave, clamped to the mapped range.
-        const double f = std::clamp (freqHz * std::pow (2.0, static_cast<double> (octaves.next (ctx.mod))), 20.0, 2000.0);
+        const double f = freqMemo (octaves.next (ctx.mod), [this] (float oct) { return std::clamp (freqHz * std::pow (2.0, static_cast<double> (oct)), 20.0, 2000.0); });
         const double c = wave == 0 ? std::sin (2.0 * pi * phase) : triangle (phase);
         phase += f / sr;
         phase -= std::floor (phase);
         const float m = mixSmooth.next (mixTarget);
-        L[i] += (static_cast<float> (L[i] * c) - L[i]) * m;
-        R[i] += (static_cast<float> (R[i] * c) - R[i]) * m;
+        L[i] += (static_cast<float> (L[i] * c) * trim - L[i]) * m;
+        R[i] += (static_cast<float> (R[i] * c) * trim - R[i]) * m;
     }
 }
 } // namespace vbdsp

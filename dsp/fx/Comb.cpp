@@ -49,7 +49,7 @@ void Comb::process (float* L, float* R, int n, const ModCtx& ctx)
     float* io[2] = { L, R };
     for (int i = 0; i < n; ++i)
     {
-        const double hz = pitchHz * std::pow (2.0, cents.next (50.0f * ctx.mod) / 1200.0); // mod range +-50 cents
+        const double hz = hzMemo (cents.next (50.0f * ctx.mod), [this] (float c) { return pitchHz * std::pow (2.0, c / 1200.0); }); // mod range +-50 cents
         double pos = writePos - sr / hz;
         while (pos < 0.0)
             pos += size;
@@ -63,7 +63,7 @@ void Comb::process (float* L, float* R, int n, const ModCtx& ctx)
             lp[c] += lpA * (d - lp[c]);
             const float y = io[c][i] + polarity * std::tanh (feedback * static_cast<float> (lp[c]));
             l[static_cast<std::size_t> (writePos)] = y;
-            io[c][i] += (y - io[c][i]) * m;
+            io[c][i] += (y * trim - io[c][i]) * m;
         }
         writePos = writePos + 1 == size ? 0 : writePos + 1;
     }
@@ -125,7 +125,7 @@ void Freeze::process (float* L, float* R, int n, const ModCtx& ctx)
                 const float w = std::min ({ 1.0f, static_cast<float> (k) / fade, static_cast<float> (len - k) / fade });
                 wet = slice[c][static_cast<std::size_t> (k)] * w + x * (1.0f - w);
             }
-            io[c][i] = x + (wet - x) * m;
+            io[c][i] = x + (wet * trim - x) * m;
         }
         if (++pos >= cycle)
             pos = 0;

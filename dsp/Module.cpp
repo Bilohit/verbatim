@@ -1,6 +1,7 @@
 #include "Module.h"
 
 #include "Catalog.h"
+#include "Trims.h"
 #include "fx/Chorus.h"
 #include "fx/Comb.h"
 #include "fx/Comp.h"
@@ -16,11 +17,20 @@
 
 namespace vbdsp
 {
+std::unique_ptr<Module> makeEffect (const vb::ModuleSpec& spec, std::uint64_t laneSeed, int slot);
+
 namespace
 {
 } // namespace
 
 std::unique_ptr<Module> makeModule (const vb::ModuleSpec& spec, std::uint64_t laneSeed, int slot)
+{
+    auto m = makeEffect (spec, laneSeed, slot);
+    m->trim = dbToGain (trimDb[spec.type % vb::EFFECT_COUNT]);
+    return m;
+}
+
+std::unique_ptr<Module> makeEffect (const vb::ModuleSpec& spec, std::uint64_t laneSeed, int slot)
 {
     switch (spec.type)
     {

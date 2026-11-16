@@ -6,6 +6,7 @@
 #include "Catalog.h"
 #include "Engine.h"
 #include "Module.h"
+#include "Trims.h"
 
 #include <cmath>
 #include <functional>
@@ -95,7 +96,8 @@ TEST_CASE ("D10 band: 12 dB/oct HP at fc/2.4 and LP at fc*2.4", "[D10]")
     const auto spec = chainOf ({ lane ({}, [&] (vb::LaneSpec& l) { l.band = 1; l.bandCenter = u; }) });
     for (double f : { fc, fc / 2.4, fc * 2.4, fc / 6.0, fc * 6.0 })
     {
-        const double expected = butterworthDb (f, fc / 2.4, true) + butterworthDb (f, fc * 2.4, false);
+        // +6 dB make-up restores the energy a 2.5-octave band removes from broadband input (T20, S1).
+        const double expected = butterworthDb (f, fc / 2.4, true) + butterworthDb (f, fc * 2.4, false) + 20.0 * std::log10 (2.0);
         INFO ("f " << f << " expected " << expected);
         CHECK (std::abs (gainDb (spec, f, -20.0) - expected) < 0.5);
     }
@@ -114,8 +116,9 @@ TEST_CASE ("D10 split: two equal halves sum to +3 dB", "[D10]")
 {
     const auto serial = chainOf ({ lane ({ satLinear(), satLinear() }) });
     const auto split = chainOf ({ lane ({ satLinear(), satLinear() }, [] (vb::LaneSpec& l) { l.split = 1; }) });
-    CHECK (std::abs (gainDb (serial, 1000.0, -40.0)) < 0.5);
-    CHECK (std::abs (gainDb (split, 1000.0, -40.0) - 20.0 * std::log10 (2.0 * 0.707)) < 0.5);
+    const double t = vbdsp::trimDb[vb::SAT]; // SAT at 0 dB drive passes its constant output trim
+    CHECK (std::abs (gainDb (serial, 1000.0, -40.0) - 2.0 * t) < 0.5);
+    CHECK (std::abs (gainDb (split, 1000.0, -40.0) - t - 20.0 * std::log10 (2.0 * 0.707)) < 0.5);
 }
 
 TEST_CASE ("D10 chain (&): the consumed lane leaves the sum", "[D10]")

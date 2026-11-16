@@ -14,7 +14,7 @@ Sat::Sat (const vb::ModuleSpec& spec)
     shapeType = disc (spec.p[2], 4);
     biasDc = lin (spec.p[3], 0.0f, 0.25f);
     mix = lin (spec.mix, 0.5f, 1.0f);
-    trim = dbToGain (-0.5f * driveDb);
+    driveTrim = dbToGain (-0.5f * driveDb);
     tiltLow = dbToGain (-0.5f * toneDb);
     tiltHigh = dbToGain (0.5f * toneDb);
     biasOut = shape (biasDc);
@@ -74,7 +74,7 @@ void Sat::process (float* L, float* R, int n, const ModCtx& ctx)
 {
     const float driveTarget = std::clamp (driveDb + 6.0f * ctx.mod, 0.0f, 24.0f);
     for (int i = 0; i < n; ++i)
-        gainOs[static_cast<std::size_t> (i)] = dbToGain (driveSmooth.next (driveTarget));
+        gainOs[static_cast<std::size_t> (i)] = static_cast<float> (gainMemo (driveSmooth.next (driveTarget), [] (float db) { return dbToGain (db); }));
     const float mixTarget = effectiveMix (mix, ctx);
     float* io[2] = { L, R };
     const int len = static_cast<int> (ring[0].size());
@@ -115,9 +115,9 @@ void Sat::process (float* L, float* R, int n, const ModCtx& ctx)
             dcX1[c] = x;
             dcY1[c] = y;
             tiltLp[c] += tiltA * (y - tiltLp[c]);
-            const float wet = static_cast<float> (tiltLp[c] * tiltLow + (y - tiltLp[c]) * tiltHigh) * trim;
+            const float wet = static_cast<float> (tiltLp[c] * tiltLow + (y - tiltLp[c]) * tiltHigh) * driveTrim;
             const float d = dryOut[c][static_cast<std::size_t> (i)];
-            io[c][i] = d + (wet - d) * mixRamp[static_cast<std::size_t> (i)];
+            io[c][i] = d + (wet * trim - d) * mixRamp[static_cast<std::size_t> (i)];
         }
     }
 }
