@@ -43,7 +43,7 @@ void Comb::reset()
     mixSmooth.reset();
 }
 
-void Comb::process (float* L, float* R, int n, const ModCtx& ctx)
+void Comb::process (float* L, float* R, int n, const ModCtx& ctx) // audio-thread
 {
     const float mixTarget = effectiveMix (mix, ctx);
     float* io[2] = { L, R };
@@ -96,7 +96,7 @@ void Freeze::reset()
     mixSmooth.reset();
 }
 
-void Freeze::process (float* L, float* R, int n, const ModCtx& ctx)
+void Freeze::process (float* L, float* R, int n, const ModCtx& ctx) // audio-thread
 {
     // Slice length T when the lane has a time base (halved until it fits the 2 s loop buffer).
     const float ms = ctx.timeDiv != 0 ? noteMs (ctx, 2000.0f) : lengthMs;

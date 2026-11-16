@@ -40,7 +40,7 @@ void Trem::reset()
     mixSmooth.reset();
 }
 
-void Trem::process (float* L, float* R, int n, const ModCtx& ctx)
+void Trem::process (float* L, float* R, int n, const ModCtx& ctx) // audio-thread
 {
     // Period T when the lane has a time base (max 2 s, the slowest free rate), else the free rate.
     const double hz = ctx.timeDiv != 0 ? 1000.0 / noteMs (ctx, 2000.0f) : rateHz;
@@ -106,7 +106,7 @@ void Wow::reset()
     mixSmooth.reset();
 }
 
-void Wow::process (float* L, float* R, int n, const ModCtx& ctx)
+void Wow::process (float* L, float* R, int n, const ModCtx& ctx) // audio-thread
 {
     const float depthTarget = std::clamp (depthMs + ctx.mod, 0.5f, 5.0f); // mod range +-1 ms
     const float mixTarget = effectiveMix (mix, ctx);
@@ -167,7 +167,7 @@ void Ring::reset()
     mixSmooth.reset();
 }
 
-void Ring::process (float* L, float* R, int n, const ModCtx& ctx)
+void Ring::process (float* L, float* R, int n, const ModCtx& ctx) // audio-thread
 {
     const float mixTarget = effectiveMix (mix, ctx);
     for (int i = 0; i < n; ++i)

@@ -224,7 +224,7 @@ void Engine::transportReset() // audio-thread
     fadeInPos = 0;
 }
 
-void Engine::process (float* L, float* R, int n) // audio-thread
+void Engine::process (float* L, float* R, int n) VB_NONBLOCKING // audio-thread
 {
     juce::ScopedNoDenormals noDenormals;
     if (active == nullptr || n <= 0)

@@ -152,7 +152,7 @@ void Lane::reset()
     meterRms = 0.0f;
 }
 
-void Lane::runModules (std::size_t from, std::size_t to, float* L, float* R, int n)
+void Lane::runModules (std::size_t from, std::size_t to, float* L, float* R, int n) // audio-thread
 {
     ModCtx ctx;
     ctx.macro = cellMacro;

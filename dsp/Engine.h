@@ -10,6 +10,16 @@
 #include <mutex>
 #include <vector>
 
+// RT1: RealtimeSanitizer checks every call made inside functions marked nonblocking (clang 20+).
+#if defined(__clang__) && defined(__has_cpp_attribute)
+    #if __has_cpp_attribute(clang::nonblocking)
+        #define VB_NONBLOCKING [[clang::nonblocking]]
+    #endif
+#endif
+#ifndef VB_NONBLOCKING
+    #define VB_NONBLOCKING
+#endif
+
 namespace vbdsp
 {
 struct Chain;
@@ -28,7 +38,7 @@ public:
     void reset();
 
     // Audio thread.
-    void process (float* L, float* R, int n);
+    void process (float* L, float* R, int n) VB_NONBLOCKING;
 
     void setMix (float mix01) { mixTarget.store (mix01); }
     void setOutputDb (float db) { outputDbTarget.store (db); }

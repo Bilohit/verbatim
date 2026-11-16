@@ -70,7 +70,7 @@ void Sat::reset()
     mixSmooth.reset();
 }
 
-void Sat::process (float* L, float* R, int n, const ModCtx& ctx)
+void Sat::process (float* L, float* R, int n, const ModCtx& ctx) // audio-thread
 {
     const float driveTarget = std::clamp (driveDb + 6.0f * ctx.mod, 0.0f, 24.0f);
     for (int i = 0; i < n; ++i)

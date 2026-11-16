@@ -45,7 +45,7 @@ void Grain::reset()
     mixSmooth.reset();
 }
 
-void Grain::spawn (float sprayMsNow)
+void Grain::spawn (float sprayMsNow) // audio-thread
 {
     const auto v = std::find_if (voices.begin(), voices.end(), [] (const Voice& x) { return ! x.active; });
     if (v == voices.end())
@@ -66,7 +66,7 @@ void Grain::spawn (float sprayMsNow)
     v->active = true;
 }
 
-void Grain::process (float* L, float* R, int n, const ModCtx& ctx)
+void Grain::process (float* L, float* R, int n, const ModCtx& ctx) // audio-thread
 {
     const float sprayTarget = std::clamp (sprayMs + 100.0f * ctx.mod, 0.0f, 500.0f); // mod range +-100 ms
     const float mixTarget = effectiveMix (mix, ctx);

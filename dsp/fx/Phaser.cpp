@@ -33,7 +33,7 @@ void Phaser::reset()
     mixSmooth.reset();
 }
 
-void Phaser::process (float* L, float* R, int n, const ModCtx& ctx)
+void Phaser::process (float* L, float* R, int n, const ModCtx& ctx) // audio-thread
 {
     // Mod: centre frequency +-1 octave, clamped to the mapped range.
     phaser.setCentreFrequency (std::clamp (centreHz * std::pow (2.0f, ctx.mod), 300.0f, 3000.0f));

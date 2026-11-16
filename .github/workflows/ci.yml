@@ -87,3 +87,44 @@ jobs:
         run: cmake --build build --config Release --parallel
       - name: Tests
         run: ctest --test-dir build -C Release --output-on-failure
+
+  # RT1 (RealtimeSanitizer on the dsp suite) and the ASan + UBSan run of F1, both clang 20 on Linux.
+  linux-sanitizers:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: rtsan
+            flags: -fsanitize=realtime
+            target: verbatim_dsp_tests
+            filter: "RT2|R1|R4|D8"
+          - name: asan-ubsan
+            flags: -fsanitize=address,undefined -fno-sanitize-recover=undefined
+            target: verbatim_core_tests
+            filter: "F1|F4|G3"
+    name: linux-${{ matrix.name }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: clang 20 and JUCE build dependencies
+        run: |
+          wget -q https://apt.llvm.org/llvm.sh && sudo bash llvm.sh 20
+          sudo apt-get install -y libasound2-dev libfreetype-dev libfontconfig1-dev libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxext-dev libgl1-mesa-dev
+      - name: Configure
+        run: >
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=clang-20 -DCMAKE_CXX_COMPILER=clang++-20
+          -DVERBATIM_BUILD_PLUGIN=OFF "-DCMAKE_CXX_FLAGS=${{ matrix.flags }}" "-DCMAKE_EXE_LINKER_FLAGS=${{ matrix.flags }}"
+      - name: Build
+        run: cmake --build build --target ${{ matrix.target }} --parallel
+      - name: Tests
+        env:
+          RTSAN_OPTIONS: halt_on_error=1
+          UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
+        run: ctest --test-dir build --output-on-failure -R "${{ matrix.filter }}"
+
+  # RT3: lock and allocation audit of audio-thread functions.
+  lock-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 tools/lock_audit.py --self-test && python3 tools/lock_audit.py dsp

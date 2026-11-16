@@ -16,6 +16,13 @@ target_link_libraries(verbatim_core_tests PRIVATE verbatim_core Catch2::Catch2Wi
 target_compile_definitions(verbatim_core_tests PRIVATE VERBATIM_GOLDEN_DIR="${CMAKE_CURRENT_SOURCE_DIR}/golden")
 catch_discover_tests(verbatim_core_tests)
 
+# RT3 lock and allocation audit of audio-thread functions in dsp/.
+find_package(Python3 COMPONENTS Interpreter)
+if(Python3_FOUND)
+    add_test(NAME RT3_lock_audit COMMAND Python3::Interpreter -I ${PROJECT_SOURCE_DIR}/tools/lock_audit.py ${PROJECT_SOURCE_DIR}/dsp)
+    add_test(NAME RT3_lock_audit_selftest COMMAND Python3::Interpreter -I ${PROJECT_SOURCE_DIR}/tools/lock_audit.py --self-test)
+endif()
+
 # G4 guard script self-test.
 find_package(Python3 COMPONENTS Interpreter)
 if(Python3_FOUND)
@@ -50,7 +57,8 @@ if(VERBATIM_BUILD_DSP)
         dsp/effects.test.cpp
         dsp/filter.test.cpp
         dsp/calibration.test.cpp
-        dsp/fuzz.test.cpp)
+        dsp/fuzz.test.cpp
+        dsp/rt.test.cpp)
     target_include_directories(verbatim_dsp_tests PRIVATE ${PROJECT_SOURCE_DIR} ${PROJECT_SOURCE_DIR}/dsp)
     target_compile_definitions(verbatim_dsp_tests PRIVATE
         VERBATIM_GOLDEN_DIR="${CMAKE_CURRENT_SOURCE_DIR}/golden"

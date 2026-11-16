@@ -71,7 +71,7 @@ float Delay::readLagrange (const std::vector<float>& l, double delay) const
     return static_cast<float> (c0 * ym1 + c1 * y0 + c2 * y1 + c3 * y2);
 }
 
-void Delay::process (float* L, float* R, int n, const ModCtx& ctx)
+void Delay::process (float* L, float* R, int n, const ModCtx& ctx) // audio-thread
 {
     const float baseMs = ctx.timeDiv != 0 ? noteMs (ctx, static_cast<float> (maxDelayMs)) : timeMs;
     const float targetDelay = static_cast<float> (std::fmin (baseMs * (1.0f + 0.02f * ctx.mod), maxDelayMs) * 0.001 * sr);

@@ -31,7 +31,7 @@ void Comp::reset()
     mixSmooth.reset();
 }
 
-void Comp::process (float* L, float* R, int n, const ModCtx& ctx)
+void Comp::process (float* L, float* R, int n, const ModCtx& ctx) // audio-thread
 {
     comp.setThreshold (std::clamp (thresholdDb + 6.0f * ctx.mod, -30.0f, -8.0f)); // mod range +-6 dB
     const float mixTarget = effectiveMix (mix, ctx);

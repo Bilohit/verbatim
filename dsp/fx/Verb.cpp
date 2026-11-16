@@ -40,7 +40,7 @@ void Verb::reset()
     mixSmooth.reset();
 }
 
-void Verb::process (float* L, float* R, int n, const ModCtx& ctx)
+void Verb::process (float* L, float* R, int n, const ModCtx& ctx) // audio-thread
 {
     std::copy (L, L + n, dryL.begin());
     std::copy (R, R + n, dryR.begin());

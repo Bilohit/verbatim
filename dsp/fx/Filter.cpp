@@ -38,7 +38,7 @@ void Filter::reset()
     mixSmooth.reset();
 }
 
-void Filter::process (float* L, float* R, int n, const ModCtx& ctx)
+void Filter::process (float* L, float* R, int n, const ModCtx& ctx) // audio-thread
 {
     const double r2 = 1.0 / q; // 2R
     // 24 dB mode: the second stage is Butterworth, so the resonant peak stays at Q (a cascade of two

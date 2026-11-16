@@ -42,7 +42,7 @@ void Pitch::reset()
     mixSmooth.reset();
 }
 
-void Pitch::process (float* L, float* R, int n, const ModCtx& ctx)
+void Pitch::process (float* L, float* R, int n, const ModCtx& ctx) // audio-thread
 {
     const float mixTarget = effectiveMix (mix, ctx);
     float* io[2] = { L, R };

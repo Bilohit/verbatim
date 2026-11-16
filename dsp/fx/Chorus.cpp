@@ -45,7 +45,7 @@ void Chorus::reset()
     mixSmooth.reset();
 }
 
-void Chorus::process (float* L, float* R, int n, const ModCtx& ctx)
+void Chorus::process (float* L, float* R, int n, const ModCtx& ctx) // audio-thread
 {
     // Mod: CHORUS depth +-0.2, FLANGE centre delay +-1 ms; clamped to the mapped ranges. Set once per call
     // (ctx.mod is constant per 32-sample control cell, so the result does not depend on host block size).

@@ -31,7 +31,7 @@ void Crush::reset()
     mixSmooth.reset();
 }
 
-void Crush::process (float* L, float* R, int n, const ModCtx& ctx)
+void Crush::process (float* L, float* R, int n, const ModCtx& ctx) // audio-thread
 {
     const float step = std::pow (2.0f, 1.0f - bits); // full scale +-1 split into 2^bits levels
     const float mixTarget = effectiveMix (mix, ctx);
