@@ -10,6 +10,8 @@ permissions:
 
 jobs:
   windows:
+    # A release needs a version tag; started from a branch, the job is skipped.
+    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -27,7 +29,7 @@ jobs:
         run: |
           $iscc = Get-ChildItem "C:\Program Files (x86)\Inno Setup *\ISCC.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
           if (-not $iscc) { choco install innosetup -y --no-progress; $iscc = Get-ChildItem "C:\Program Files (x86)\Inno Setup *\ISCC.exe" | Select-Object -First 1 }
-          & $iscc.FullName installer\verbatim.iss
+          & $iscc.FullName "/DAppVersion=$('${{ github.ref_name }}'.TrimStart('v'))" installer\verbatim.iss
 
       - name: Zip the plugin bundle
         shell: pwsh

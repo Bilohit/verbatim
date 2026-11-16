@@ -2,7 +2,9 @@
 ; Microsoft WebView2 runtime the editor needs. Build: ISCC.exe installer\verbatim.iss (after a Release build).
 
 #define AppName "Verbatim"
-#define AppVersion "1.0.0"
+#ifndef AppVersion
+  #define AppVersion "1.0.0"
+#endif
 #define AppPublisher "Verbatim Audio"
 #define Bundle "..\build\Verbatim_artefacts\Release\VST3\Verbatim.vst3"
 
@@ -16,6 +18,8 @@ DefaultDirName={commoncf64}\VST3
 DisableDirPage=yes
 DisableProgramGroupPage=yes
 Uninstallable=yes
+; Keep the uninstaller out of the shared VST3 folder hosts scan.
+UninstallFilesDir={commonpf64}\Verbatim
 UninstallDisplayName={#AppName} {#AppVersion}
 LicenseFile=..\LICENSE
 OutputDir=..\build\installer

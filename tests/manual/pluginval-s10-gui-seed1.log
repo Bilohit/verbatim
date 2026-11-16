@@ -1,14 +1,14 @@
-Started validating: <repo>\build\Verbatim_artefacts\Release\VST3\Verbatim.vst3
-Random seed: 0x354b49b
+Started validating: build\Verbatim_artefacts\Release\VST3\Verbatim.vst3
+Random seed: 0x74b497c
 Validation started
 Strictness level: 10
 -----------------------------------------------------------------
-Starting tests in: pluginval / Scan for plugins located in: <repo>\build\Verbatim_artefacts\Release\VST3\Verbatim.vst3...
+Starting tests in: pluginval / Scan for plugins located in: build\Verbatim_artefacts\Release\VST3\Verbatim.vst3...
 Num plugins found: 1
 
 Testing plugin: VST3-Verbatim-a886b80d-1ca470ee
-Verbatim Audio: Verbatim v0.1.0
-Completed tests in pluginval / Scan for plugins located in: <repo>\build\Verbatim_artefacts\Release\VST3\Verbatim.vst3
+Verbatim Audio: Verbatim v1.0.0
+Completed tests in pluginval / Scan for plugins located in: build\Verbatim_artefacts\Release\VST3\Verbatim.vst3
 -----------------------------------------------------------------
 Starting tests in: pluginval / Open plugin (cold)...
 Completed tests in pluginval / Open plugin (cold)

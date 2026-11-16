@@ -27,6 +27,7 @@ cmake --build build --config Release --parallel
 ctest --test-dir build -C Release                      # 131 C++ tests
 cd gui; npx playwright test; cd ..                     # 59 editor tests (uses installed Chrome)
 python tools/lock_audit.py dsp                         # RT3
+$env:VERBATIM_P1_MIN=10; build\tests\Release\verbatim_dsp_tests.exe "[P1]"            # P1 at the 10x gate
 python tools/check_golden.py origin/main..HEAD         # G4
 $env:VERBATIM_FULL_FUZZ=1; build\tests\Release\verbatim_dsp_tests.exe "F2*,F3*"   # full F2 / F3
 tools\bin\pluginval.exe --strictness-level 10 --seed 1 --validate build\Verbatim_artefacts\Release\VST3\Verbatim.vst3
@@ -85,9 +86,9 @@ Final run: 2026-11-16, Release build of commit `T32` plus this report, Windows 1
 | F4 | Pass | 5000 random override sequences keep lane invariants; JSON round trip identical (5000 sequences) |
 | F5 | Pass | Truncated, corrupt and wrong-version state blobs load safely |
 | RT1 | Not run | RealtimeSanitizer and ASan/UBSan jobs written in `ci.yml`; need Linux, see below |
-| RT2 | Pass | Zero allocations on the audio thread through chain swaps, automation and all 16 effects |
-| RT3 | Pass | Lock audit: 27 audio-thread functions, 0 problems |
-| P1 | Pass | True worst case (4 lanes x 8 modules with PITCH, GRAIN, VERB): 11.1x real time, gate 10x |
+| RT2 | Pass | Zero allocations on the audio thread through chain swaps, overrides and automation (worst-case chains with PITCH, GRAIN, VERB), a GRAIN seed and the R4 swap |
+| RT3 | Pass | Lock audit: 24 audio-thread function bodies, 0 problems |
+| P1 | Pass | True worst case (4 lanes x 8 modules with PITCH, GRAIN, VERB): 10.8x real time, run with `VERBATIM_P1_MIN=10` (ctest default gate is 4x so slower CI machines do not fail) |
 | P2 | Pass | Chain build on the message thread: median 1.09 ms, worst 1.66 ms |
 | P3 | Pass | 50 text changes a second for 20 s: +0.5 % CPU |
 
@@ -95,7 +96,7 @@ Final run: 2026-11-16, Release build of commit `T32` plus this report, Windows 1
 
 | ID | Result | Evidence |
 |---|---|---|
-| V1 | Pass | pluginval strictness 10 with GUI tests, seeds 1 to 3: SUCCESS (`tests/manual/pluginval-*.log`) |
+| V1 | Pass | pluginval strictness 10 with GUI tests, seeds 1 to 3: SUCCESS (`tests/manual/pluginval-s10-gui-seed*.log`) |
 | V2 | Not run | DAW smoke checklist ready (`tests/manual/daw-smoke.md`); owner runs it in their own hosts |
 | V3 | Pass | Steinberg VST3 validator: 47 passed, 0 failed (`tests/manual/vst3-validator.log`) |
 | V4 | Not run | Sample-rate and buffer changes in REAPER; part of the DAW pass. The F3 sweep covers 44.1 to 192 kHz and 16 to 8192 blocks in the harness |
@@ -223,3 +224,10 @@ Each was decided during the build and recorded with its cost if wrong. Grouped b
 **Real-time safety (T29)**
 
 - RT1 sanitizer jobs written but not run (no Linux machine, CI blocked).
+- The lock audit first counted marker comments (27) and skipped a body whose marker sat on a continuation
+  line (`Chain::render`). It now walks to each function body, skips declarations and counts bodies: 24, all clean.
+
+**Release (T32)**
+
+- The uninstaller lives in `C:\Program Files\Verbatim`, not in the shared VST3 folder.
+- The release workflow runs only from a `v*` tag and stamps the installer with that version.

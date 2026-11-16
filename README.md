@@ -130,7 +130,7 @@ The design documents behind every decision are in [`docs/`](docs/).
 
 | Promise | How it is checked |
 |---|---|
-| Same text, same chain, forever | 420 golden texts (every mark, word, script, invalid byte and edge case) hash identically on MSVC, clang-cl, Linux clang, Linux gcc and macOS clang; a CI guard blocks any change to the frozen hashes |
+| Same text, same chain, forever | 420 golden texts (every mark, word, script, invalid byte and edge case) hash identically on MSVC, clang-cl, Linux clang, Linux gcc and macOS clang; a guard script rejects any change to the frozen hashes |
 | Same session, same audio | Renders are bit-identical across fresh instances, `reset()`, project reload and two bounces from the same play start; output stays within -100 dBFS across host block sizes |
 | Never harms your mix | 2000 random texts and 200 extreme cases (silence, DC, full-scale square, 44.1 to 192 kHz, 16 to 8192-sample blocks): no NaN, never above 0 dBFS, no self-oscillation |
 | Real-time safe | Zero allocations on the audio thread through chain swaps and automation; a lock audit of every audio-thread function |
@@ -154,7 +154,7 @@ The plugin is written to `build/Verbatim_artefacts/Release/VST3/Verbatim.vst3`. 
 
 ## Known limits
 
-- Windows only, VST3 only. No MIDI or sidechain input; no per-effect host automation (Mix, Macro and Output are automatable).
+- Windows only, VST3 only. No MIDI or sidechain input; no per-effect host automation (Mix, Macro, Output and Bypass are automatable).
 - Text is hashed as raw UTF-8 bytes: a letter typed as one composed character and as a letter plus combining accent are different seeds.
 - Effect tails are not carried across a reroll; a new chain fades in over about 30 ms after its delay lines fill.
 - Bit-identical audio is promised for the same build on the same machine; across compilers or CPUs it is equal to within floating-point rounding, while the chain itself is identical everywhere.

@@ -79,12 +79,10 @@ TEST_CASE ("P1 CPU at the true worst case: 4 lanes x 8 modules with PITCH, GRAIN
     e.prepare (SR, BLOCK);
     e.reset();
     const auto in = pinkNoise (static_cast<std::size_t> (60 * SR), 72, -18.0);
-    const double t0 = threadCpuTime();
     const auto start = std::chrono::steady_clock::now();
     render (e, in, in, BLOCK);
     const double secs = std::chrono::duration<double> (std::chrono::steady_clock::now() - start).count();
     const double factor = 60.0 / secs;
-    (void) t0;
     const char* minEnv = std::getenv ("VERBATIM_P1_MIN");
     const double minFactor = minEnv != nullptr ? std::atof (minEnv) : 4.0;
     std::printf ("P1 (8 modules) realtime factor %.1fx (gate %.0fx), PITCH in chain: %s\n", factor, minFactor, hasPitch ? "yes" : "no");
