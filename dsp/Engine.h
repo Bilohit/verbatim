@@ -42,6 +42,7 @@ public:
     bool swapInProgress() const { return fading.load(); }
     int swapWarmupSamples() const; // silent pre-roll of the active chain before its crossfade
     int nanGuardCount() const { return nanTotal.load(); }
+    int retireOverflows() const { return deferredTakes.load(); } // pending chains left waiting because the retire FIFO was full
 
     struct Meters
     {
@@ -81,6 +82,6 @@ private:
     void transportReset();            // audio-thread
     float mixCurrent = 1.0f, gainCurrent = 1.0f, bypassCurrent = 0.0f, macroCurrent = 0.5f;
     std::vector<float> bypassRamp, macroRamp;
-    std::atomic<int> nanTotal { 0 };
+    std::atomic<int> nanTotal { 0 }, deferredTakes { 0 };
 };
 } // namespace vbdsp

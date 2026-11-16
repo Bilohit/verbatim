@@ -58,7 +58,7 @@ endif()
 
 if(VERBATIM_BUILD_PLUGIN)
     # Links the plugin's shared-code target, which holds the processor and its JUCE modules.
-    add_executable(verbatim_plugin_tests plugin/state.test.cpp plugin/editor.test.cpp plugin/transport.test.cpp)
+    add_executable(verbatim_plugin_tests plugin/state.test.cpp plugin/editor.test.cpp plugin/transport.test.cpp plugin/bridge.test.cpp)
     target_include_directories(verbatim_plugin_tests PRIVATE ${PROJECT_SOURCE_DIR} ${PROJECT_SOURCE_DIR}/dsp
         $<TARGET_PROPERTY:Verbatim,INCLUDE_DIRECTORIES>)
     target_compile_definitions(verbatim_plugin_tests PRIVATE $<TARGET_PROPERTY:Verbatim,COMPILE_DEFINITIONS>)

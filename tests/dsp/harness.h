@@ -26,6 +26,10 @@ Stereo render (vbdsp::Engine& engine, const std::vector<float>& inL, const std::
 double rms (const float* x, std::size_t n);
 double toDb (double linear);
 
+// CPU time consumed by the calling thread (cycles on Windows, process CPU seconds elsewhere): immune to other
+// processes' load, so timing tests like D5 compare work, not wall-clock noise.
+double threadCpuTime();
+
 // Allocations made on a thread while it is inside Engine::process during render().
 std::size_t allocationsInAudio();
 void resetAllocationCount();

@@ -26,9 +26,13 @@ VerbatimProcessor::VerbatimProcessor()
     macro = dynamic_cast<juce::AudioParameterFloat*> (params.getParameter ("macro"));
     output = dynamic_cast<juce::AudioParameterFloat*> (params.getParameter ("output"));
     bypass = dynamic_cast<juce::AudioParameterBool*> (params.getParameter ("bypass"));
+    startTimerHz (30);
 }
 
-VerbatimProcessor::~VerbatimProcessor() = default;
+VerbatimProcessor::~VerbatimProcessor()
+{
+    stopTimer();
+}
 
 void VerbatimProcessor::prepareToPlay (double sampleRate, int block)
 {
@@ -114,6 +118,9 @@ void VerbatimProcessor::getStateInformation (juce::MemoryBlock& dest)
     s.macro = macro->get();
     s.outputDb = output->get();
     s.overrides = overrides;
+    s.uiW = ui.w;
+    s.uiH = ui.h;
+    s.advanced = ui.advanced;
     const auto json = vbplugin::toJson (s);
     dest.append (json.data(), json.size());
 }
@@ -132,6 +139,7 @@ void VerbatimProcessor::setStateInformation (const void* data, int size)
         spec = {};
         overrides = {};
         engine.setSpec (spec);
+        ++generation;
         return;
     }
     mix->setValueNotifyingHost (mix->convertTo0to1 (s.mix));
@@ -140,8 +148,10 @@ void VerbatimProcessor::setStateInformation (const void* data, int size)
     {
         std::lock_guard<std::mutex> lock (stateMutex);
         overrides = s.overrides;
+        ui = { s.uiW, s.uiH, s.advanced };
     }
     applyText (s.text);
+    ++generation;
 }
 
 void VerbatimProcessor::setText (const std::string& newText)
@@ -166,6 +176,18 @@ bool VerbatimProcessor::setOverride (int lane, vb::OverrideOp op, int position, 
     }
     updateHostDisplay (ChangeDetails().withNonParameterStateChanged (true));
     return true;
+}
+
+VerbatimProcessor::UiState VerbatimProcessor::getUi() const
+{
+    std::lock_guard<std::mutex> lock (stateMutex);
+    return ui;
+}
+
+void VerbatimProcessor::setUi (const UiState& newUi)
+{
+    std::lock_guard<std::mutex> lock (stateMutex);
+    ui = newUi;
 }
 
 vb::ResolvedChain VerbatimProcessor::getResolved() const

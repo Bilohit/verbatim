@@ -58,7 +58,8 @@ void Pitch::process (float* L, float* R, int n, const ModCtx& ctx)
         for (int c = 0; c < 2; ++c)
         {
             auto& l = line[c];
-            l[static_cast<std::size_t> (writePos)] = io[c][i] + std::tanh (feedback * last[c]);
+            const float fb = feedback * last[c];
+            l[static_cast<std::size_t> (writePos)] = io[c][i] + (std::abs (fb) < 1e-15f ? fb : std::tanh (fb)); // tanh(x) == x in float below 1e-15; skips the slow tiny-argument path (D5)
             double y = 0.0;
             for (double p : ph)
             {

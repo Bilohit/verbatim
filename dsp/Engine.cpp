@@ -239,6 +239,8 @@ void Engine::process (float* L, float* R, int n) // audio-thread
 
     // Take a pending chain when not fading and the retire FIFO can accept the old one.
     const int used = retireWrite.load (std::memory_order_relaxed) - retireRead.load (std::memory_order_acquire);
+    if (! fading.load (std::memory_order_relaxed) && used >= retireCapacity && pending.load (std::memory_order_relaxed) != nullptr)
+        deferredTakes.fetch_add (1);
     if (! fading.load (std::memory_order_relaxed) && used < retireCapacity)
         if (auto* next = pending.exchange (nullptr))
         {

@@ -122,10 +122,9 @@ TEST_CASE ("D5 denormals: 60 s of 1e-30 noise costs at most 20 % more than norma
             e.setSpec (single (fx.type));
             e.prepare (SR, BLOCK);
             e.reset();
-            const auto t0 = std::chrono::steady_clock::now();
+            const double t0 = threadCpuTime();
             render (e, in, in, BLOCK);
-            const auto secs = std::chrono::duration<double> (std::chrono::steady_clock::now() - t0).count();
-            return secs / static_cast<double> (in.size());
+            return (threadCpuTime() - t0) / static_cast<double> (in.size());
         };
         // Minimum of nine interleaved runs each: robust against scheduler and clock noise.
         double base = 1e9, denorm = 1e9;

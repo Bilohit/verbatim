@@ -1,11 +1,10 @@
 #include "VerbatimEditor.h"
 
-#include "Bridge.h"
 #include "VerbatimProcessor.h"
 
-VerbatimEditor::VerbatimEditor (VerbatimProcessor& p) : AudioProcessorEditor (p)
+VerbatimEditor::VerbatimEditor (VerbatimProcessor& p) : AudioProcessorEditor (p), processor (p), relays (p)
 {
-    const auto options = vbplugin::webOptions (p);
+    const auto options = vbplugin::webOptions (p, relays);
     if (juce::WebBrowserComponent::areOptionsSupported (options))
     {
         web = std::make_unique<juce::WebBrowserComponent> (options);
@@ -22,13 +21,38 @@ VerbatimEditor::VerbatimEditor (VerbatimProcessor& p) : AudioProcessorEditor (p)
         addAndMakeVisible (missingLabel);
         addAndMakeVisible (downloadLink);
     }
+    seenGeneration = p.stateGeneration();
+    const auto ui = p.getUi();
     setResizable (true, true);
     setResizeLimits (720, 520, 1600, 1000);
-    setSize (900, 620);
+    setSize (ui.w, ui.h);
+    startTimerHz (30);
+}
+
+VerbatimEditor::~VerbatimEditor()
+{
+    stopTimer();
+}
+
+void VerbatimEditor::timerCallback()
+{
+    if (web == nullptr)
+        return;
+    // emitEventIfBrowserIsVisible only sends while the editor is showing (K2: never before page load).
+    web->emitEventIfBrowserIsVisible ("levels", vbplugin::levelsPayload (processor));
+    if (const int g = processor.stateGeneration(); g != seenGeneration)
+    {
+        seenGeneration = g;
+        web->emitEventIfBrowserIsVisible ("chain", vbplugin::chainEventPayload (processor));
+    }
 }
 
 void VerbatimEditor::resized()
 {
+    auto ui = processor.getUi();
+    ui.w = getWidth();
+    ui.h = getHeight();
+    processor.setUi (ui);
     if (web != nullptr)
     {
         web->setBounds (getLocalBounds());

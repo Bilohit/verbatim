@@ -3,6 +3,12 @@
 #include "Rng.h"
 
 #include <atomic>
+#include <ctime>
+#if defined(_WIN32)
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
+#include <windows.h>
+#endif
 #include <cmath>
 #include <cstdlib>
 #include <new>
@@ -100,6 +106,17 @@ double rms (const float* x, std::size_t n)
 }
 
 double toDb (double linear) { return 20.0 * std::log10 (std::max (linear, 1e-30)); }
+
+double threadCpuTime()
+{
+#if defined(_WIN32)
+    ULONG64 cycles = 0;
+    QueryThreadCycleTime (GetCurrentThread(), &cycles);
+    return static_cast<double> (cycles);
+#else
+    return static_cast<double> (std::clock()) / CLOCKS_PER_SEC;
+#endif
+}
 
 std::size_t allocationsInAudio() { return audioAllocs.load(); }
 void resetAllocationCount() { audioAllocs.store (0); }

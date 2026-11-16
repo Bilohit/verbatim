@@ -137,6 +137,11 @@ std::string toJson (const PluginState& state)
     root->setProperty ("text", juce::String::fromUTF8 (state.text.data(), static_cast<int> (state.text.size())));
     root->setProperty ("params", juce::var (params));
     root->setProperty ("overrides", overridesToVar (state.overrides));
+    auto* ui = new juce::DynamicObject();
+    ui->setProperty ("w", state.uiW);
+    ui->setProperty ("h", state.uiH);
+    ui->setProperty ("advanced", state.advanced);
+    root->setProperty ("ui", juce::var (ui));
     return juce::JSON::toString (juce::var (root), true).toStdString();
 }
 
@@ -172,6 +177,12 @@ bool fromJson (const std::string& json, PluginState& out)
     }
     if (! overridesFromVar (root["overrides"], s.overrides))
         return false;
+    if (const auto ui = root["ui"]; ui.isObject())
+    {
+        s.uiW = juce::jlimit (720, 1600, ui["w"].isVoid() ? 900 : static_cast<int> (ui["w"]));
+        s.uiH = juce::jlimit (520, 1000, ui["h"].isVoid() ? 620 : static_cast<int> (ui["h"]));
+        s.advanced = static_cast<bool> (ui["advanced"]);
+    }
     out = s;
     return true;
 }

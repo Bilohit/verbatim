@@ -4,11 +4,12 @@
 
 #include "dsp/Engine.h"
 
+#include <atomic>
 #include <mutex>
 #include <string>
 
 // Verbatim audio processor: host params, state, and the text -> chain path (docs/02-spec.md).
-class VerbatimProcessor final : public juce::AudioProcessor
+class VerbatimProcessor final : public juce::AudioProcessor, private juce::Timer
 {
 public:
     VerbatimProcessor();
@@ -48,10 +49,25 @@ public:
     bool setOverride (int lane, vb::OverrideOp op, int position, const vb::ModuleSpec& module = {});
     vb::ResolvedChain getResolved() const;
 
+    struct UiState
+    {
+        int w = 900, h = 620;
+        bool advanced = false;
+    };
+    UiState getUi() const;
+    void setUi (const UiState& ui);
+
+    // Incremented whenever the host loads state (any thread); the editor sends a `chain` event on change.
+    int stateGeneration() const { return generation.load(); }
+    const vbdsp::Engine::Meters& meters() const { return engine.meters; }
+    void collectGarbage() { engine.collectGarbage(); }
+    int retireOverflows() const { return engine.retireOverflows(); }
+
     juce::AudioProcessorValueTreeState params;
 
 private:
     void applyText (const std::string& text); // builds the chain synchronously
+    void timerCallback() override { engine.collectGarbage(); } // 30 Hz, message thread: delete retired chains
 
     vbdsp::Engine engine;
     juce::AudioParameterFloat* mix = nullptr;
@@ -64,6 +80,8 @@ private:
     vb::ChainSpec spec;
     vb::Overrides overrides;
     bool stateError = false;
+    UiState ui;
+    std::atomic<int> generation { 0 };
     std::string unloadableBlob; // kept verbatim while in state E3
 
     juce::AudioBuffer<float> scratch;

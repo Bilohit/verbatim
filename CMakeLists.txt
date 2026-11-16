@@ -96,6 +96,7 @@ target_sources(Verbatim PRIVATE
     plugin/State.cpp
     plugin/VerbatimEditor.cpp
     plugin/Bridge.cpp
+    plugin/ParamText.cpp
     ${VERBATIM_DSP_SOURCES})
 target_include_directories(Verbatim PRIVATE ${PROJECT_SOURCE_DIR})
 
