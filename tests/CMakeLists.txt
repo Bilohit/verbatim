@@ -40,7 +40,9 @@ if(VERBATIM_BUILD_DSP)
         dsp/lane.test.cpp
         dsp/feedback.test.cpp
         dsp/mod.test.cpp
-        dsp/timebase.test.cpp)
+        dsp/timebase.test.cpp
+        dsp/effects.test.cpp
+        dsp/filter.test.cpp)
     target_include_directories(verbatim_dsp_tests PRIVATE ${PROJECT_SOURCE_DIR} ${PROJECT_SOURCE_DIR}/dsp)
     target_compile_definitions(verbatim_dsp_tests PRIVATE
         JUCE_STANDALONE_APPLICATION=1 JUCE_USE_CURL=0 JUCE_WEB_BROWSER=0)
