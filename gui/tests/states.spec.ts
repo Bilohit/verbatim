@@ -115,9 +115,12 @@ for (const [name, setUp] of AXE_STATES) {
     await page.goto("/?mock");
     await setUp(page);
     await page.waitForTimeout(400);
+    // Scan the settled state: a mid-fade element (the hover tip after a click) blends into its ground.
+    await page.waitForFunction(() =>
+      document.getAnimations().every((a) => a.playState !== "running" || a.effect?.getComputedTiming().endTime === Infinity));
     const result = await new AxeBuilder({ page }).analyze();
     const bad = result.violations.filter((v) => v.impact === "serious" || v.impact === "critical");
-    expect(bad.map((v) => `${v.id}: ${v.nodes.length}`)).toEqual([]);
+    expect(bad.map((v) => `${v.id}: ${v.nodes.map((n) => `${n.target} ${n.failureSummary}`).join(" | ")}`)).toEqual([]);
   });
 }
 
