@@ -128,3 +128,52 @@ TEST_CASE ("D9 TREM period = T at host tempo", "[D9]")
             CHECK (std::abs (period - expected) <= 1.0);
         }
 }
+
+TEST_CASE ("D9 FREEZE slice length = T at host tempo", "[D9]")
+{
+    for (int div : { 4, 8, 16 })
+        for (double bpm : { 90.0, 120.0, 174.0 })
+        {
+            INFO ("timeDiv " << div << " bpm " << bpm);
+            vb::ModuleSpec spec;
+            spec.type = vb::FREEZE;
+            spec.p = { 32768, 65535, 65535, 0, 0, 0 }; // period 8 lengths, 3 repeats
+            spec.mix = 65535;
+            auto m = vbdsp::makeModule (spec, 0, 0);
+            m->prepare (SR, BLOCK);
+            vbdsp::ModCtx ctx;
+            ctx.bpm = bpm;
+            ctx.timeDiv = static_cast<std::uint8_t> (div);
+            ctx.macroScaling = false; // module mix exactly lin(0.3, 0.8) at u = 65535 -> 0.8
+            const auto len = static_cast<std::size_t> (std::lround (noteSamples (div, bpm, 2000.0)));
+            const auto n = 5 * len;
+            const auto in = pinkNoise (n, 41, -18.0);
+            auto L = in, R = in;
+            for (std::size_t s = 0; s < n; s += BLOCK)
+                m->process (L.data() + s, R.data() + s, static_cast<int> (std::min<std::size_t> (BLOCK, n - s)), ctx);
+            // Wet part w = (y - 0.2 x) / 0.8 repeats with the slice length during playback [len, 4 len).
+            std::vector<double> w (n);
+            for (std::size_t i = 0; i < n; ++i)
+                w[i] = (L[i] - 0.2 * in[i]) / 0.8;
+            auto corr = [&] (std::size_t lag) {
+                double a = 0, b = 0, c = 0;
+                for (std::size_t i = len; i + lag < 4 * len; ++i)
+                {
+                    a += w[i] * w[i + lag];
+                    b += w[i] * w[i];
+                    c += w[i + lag] * w[i + lag];
+                }
+                return a / std::sqrt (b * c + 1e-30);
+            };
+            std::size_t best = len;
+            double bestC = -1;
+            for (std::size_t lag = len - 50; lag <= len + 50; ++lag)
+                if (const double c = corr (lag); c > bestC)
+                {
+                    bestC = c;
+                    best = lag;
+                }
+            CHECK (bestC > 0.8);
+            CHECK (std::abs (static_cast<double> (best) - noteSamples (div, bpm, 2000.0)) <= 1.0);
+        }
+}

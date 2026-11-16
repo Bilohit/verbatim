@@ -2,6 +2,7 @@
 
 #include "Catalog.h"
 #include "fx/Chorus.h"
+#include "fx/Comb.h"
 #include "fx/Comp.h"
 #include "fx/Crush.h"
 #include "fx/Delay.h"
@@ -41,6 +42,8 @@ std::unique_ptr<Module> makeModule (const vb::ModuleSpec& spec, std::uint64_t la
         case vb::TREM:   return std::make_unique<Trem> (spec);
         case vb::WOW:    return std::make_unique<Wow> (spec, laneSeed, slot);
         case vb::RING:   return std::make_unique<Ring> (spec);
+        case vb::COMB:   return std::make_unique<Comb> (spec);
+        case vb::FREEZE: return std::make_unique<Freeze> (spec);
         default:        return std::make_unique<PassThrough>();
     }
 }
