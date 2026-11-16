@@ -109,6 +109,11 @@ TEST_CASE ("chain payload: per module type, name, held, params with mapped value
     CHECK (static_cast<int> (params[0]["u"]) == 23281);
     CHECK (std::abs (static_cast<double> (params[0]["value"]) - 24.0 * 23281.0 / 65535.0) < 1e-3);
     CHECK (params[4]["name"].toString() == "mix");
+    // Raw values for editing: all six params (unused ones included) and mix.
+    REQUIRE (lane[0]["p"].getArray()->size() == 6);
+    CHECK (static_cast<int> ((*lane[0]["p"].getArray())[0]) == 23281);
+    CHECK (static_cast<int> ((*lane[0]["p"].getArray())[5]) == 14925);
+    CHECK (static_cast<int> (lane[0]["mix"]) == 41917);
     CHECK (params[4]["text"].toString().endsWith ("%"));
     // Every effect has named params with text for every catalog type.
     for (std::uint8_t t = 0; t < vb::EFFECT_COUNT; ++t)

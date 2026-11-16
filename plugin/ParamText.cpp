@@ -122,6 +122,11 @@ juce::var chainPayload (const vb::ResolvedChain& chain)
             o->setProperty ("type", static_cast<int> (rm.spec.type));
             o->setProperty ("name", vb::catalog[rm.spec.type % vb::EFFECT_COUNT].name);
             o->setProperty ("held", rm.held);
+            juce::Array<juce::var> raw;
+            for (auto v : rm.spec.p)
+                raw.add (static_cast<int> (v));
+            o->setProperty ("p", raw); // all six, so an edit can send the whole module back
+            o->setProperty ("mix", static_cast<int> (rm.spec.mix));
             juce::Array<juce::var> params;
             for (auto& p : moduleParams (rm.spec, chain.lanes[i].lane.timeDiv))
                 params.add (p);

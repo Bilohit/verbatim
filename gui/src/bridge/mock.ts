@@ -35,6 +35,26 @@ function pseudoChain(text: string): Lane[] {
   return lanes;
 }
 
+// Mock modules carry raw values and simple percent params (the plugin sends the real mapped values).
+function decorate(m: { type: number; name?: string; held: boolean; p?: number[]; mix?: number }) {
+  const p = m.p ?? [32768, 32768, 32768, 32768, 32768, 32768];
+  const mix = m.mix ?? 32768;
+  const pct = (u: number) => `${Math.round(u / 655.35)} %`;
+  return {
+    type: m.type,
+    name: m.name ?? "FX",
+    held: m.held,
+    p,
+    mix,
+    params: [
+      { name: "amount", index: 0, u: p[0], value: p[0] / 65535, text: pct(p[0]) },
+      { name: "colour", index: 1, u: p[1], value: p[1] / 65535, text: pct(p[1]) },
+      { name: "mix", index: 6, u: mix, value: mix / 65535, text: pct(mix) },
+    ],
+  };
+}
+const decorateChain = (chain: Lane[]): Lane[] => chain.map((l) => ({ ...l, modules: l.modules.map(decorate) }));
+
 export function createMockBridge(delayMs = 0): Bridge & { calls: { name: string; args: unknown }[] } {
   let current: TextPayload = { text: "", tokens: [[]], chain: [], seedHash: "", ignoredLines: [], full: false };
   let ui: UiState = { w: 900, h: 620, advanced: false };
@@ -55,7 +75,7 @@ export function createMockBridge(delayMs = 0): Bridge & { calls: { name: string;
     setText(text) {
       calls.push({ name: "setText", args: text });
       const hit = known.get(text);
-      current = hit ?? { text, tokens: plainTokens(text), chain: pseudoChain(text), seedHash: text.trim() ? "0000beef" : "", ignoredLines: [], full: new TextEncoder().encode(text).length >= 4096 };
+      current = hit ? { ...hit, chain: decorateChain(hit.chain) } : { text, tokens: plainTokens(text), chain: decorateChain(pseudoChain(text)), seedHash: text.trim() ? "0000beef" : "", ignoredLines: [], full: new TextEncoder().encode(text).length >= 4096 };
       return later(current);
     },
     setOverride(args: OverrideArgs) {
@@ -65,8 +85,8 @@ export function createMockBridge(delayMs = 0): Bridge & { calls: { name: string;
       let ok = !!lane;
       if (lane && (args.op === "hold" || args.op === "release") && lane.modules[args.slot]) lane.modules[args.slot].held = args.op === "hold";
       else if (lane && args.op === "remove") lane.modules.splice(args.slot, 1);
-      else if (lane && args.op === "add" && args.module) lane.modules.push({ type: args.module.type, name: "FX", held: true });
-      else if (lane && args.op === "edit" && lane.modules[args.slot]) lane.modules[args.slot].held = true;
+      else if (lane && args.op === "add" && args.module) lane.modules.push(decorate({ ...args.module, held: true }));
+      else if (lane && args.op === "edit" && lane.modules[args.slot] && args.module) lane.modules[args.slot] = decorate({ ...args.module, held: true });
       else ok = false;
       current = { ...current, chain };
       return later({ ok, chain });

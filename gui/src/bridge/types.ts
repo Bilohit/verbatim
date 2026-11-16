@@ -3,7 +3,7 @@ export type TokenClass = "word" | "direction" | "op" | "number" | "ignored";
 export type Token = { start: number; length: number; class: TokenClass }; // UTF-8 byte offsets within the line
 
 export type Param = { name: string; index: number; u: number; value: number; text: string };
-export type Module = { type: number; name: string; held: boolean; params?: Param[] };
+export type Module = { type: number; name: string; held: boolean; p?: number[]; mix?: number; params?: Param[] };
 export type Lane = { lane: number; modules: Module[] };
 
 export type TextPayload = {
