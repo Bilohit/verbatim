@@ -19,6 +19,10 @@ jobs:
       - name: Tests
         run: ctest --test-dir build -C Release --output-on-failure
 
+      - name: UI browser tests (Playwright, mock bridge, installed Chrome)
+        working-directory: gui
+        run: npx playwright test --reporter=line
+
       - name: pluginval (strictness 5, 3 seeds)
         shell: bash
         run: |

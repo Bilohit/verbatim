@@ -1,0 +1,107 @@
+/* Machine layout. Every value comes from tokens.css. */
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; overflow-x: clip; background: var(--body); }
+body { color: var(--body-ink); font-family: var(--font-ui); line-height: 1.5; }
+#root { min-height: 100%; container-type: inline-size; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+.machine {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  gap: var(--s6);
+  padding: var(--s6);
+  background: var(--body);
+}
+.top { display: flex; align-items: center; justify-content: space-between; gap: var(--s4); min-height: 40px; }
+.wordmark { font-weight: 700; letter-spacing: 0.04em; font-size: 1.05rem; }
+
+/* Paper on the platen */
+.paper {
+  position: relative;
+  margin: 0 var(--s6);
+  padding: var(--s8) var(--s8) calc(var(--s8) + var(--s2));
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: 0 -1px 0 var(--paper-edge), 0 10px 18px -8px var(--platen-shadow);
+}
+.paper::after {
+  content: "";
+  position: absolute;
+  left: calc(-1 * var(--s6));
+  right: calc(-1 * var(--s6));
+  bottom: -9px;
+  height: 18px;
+  border-radius: 9px;
+  background: var(--platen);
+  box-shadow: 0 3px 5px var(--platen-shadow);
+}
+/* Max 8 visible lines, then the paper scrolls (docs/05-ui-design.md section 2). */
+.paper-scroll {
+  max-height: calc(var(--text-size) * var(--text-line) * 8);
+  overflow-y: auto;
+  margin-right: 96px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--ink-faint) transparent;
+}
+.editor { position: relative; min-width: 0; }
+.ink-layer,
+.editor textarea {
+  font-family: var(--font-text);
+  font-size: var(--text-size);
+  font-weight: 400;
+  line-height: var(--text-line);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  letter-spacing: 0;
+}
+.ink-layer { min-height: calc(var(--text-size) * var(--text-line) * 3); color: var(--ink-faint); }
+.ink-line { min-height: calc(var(--text-size) * var(--text-line)); }
+.ink-line:last-child { white-space: pre-wrap; }
+.editor textarea {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  resize: none;
+  overflow: hidden;
+  background: transparent;
+  color: transparent;
+  caret-color: var(--ribbon);
+  outline: none;
+}
+.editor textarea::selection { background: var(--selection); color: transparent; }
+
+/* Token colouring from core: direction and number underlined, ops red and bold, ignored lines struck. */
+.t-direction, .t-number { text-decoration: underline; text-decoration-thickness: 1.5px; text-underline-offset: 0.2em; }
+.t-op { color: var(--ribbon); font-weight: 700; }
+.ink-line[data-ignored] { text-decoration: line-through; opacity: 0.7; }
+
+.postmark {
+  position: absolute;
+  top: var(--s4);
+  right: var(--s4);
+  width: 76px;
+  height: 76px;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-data);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--ribbon);
+  border: 1.5px solid currentColor;
+  border-radius: 50%;
+  outline: 1.5px solid currentColor;
+  outline-offset: -6px;
+  transform: rotate(-9deg);
+}
+
+@container (max-width: 560px) {
+  .machine { padding: var(--s4); gap: var(--s4); }
+  .paper { margin: 0 var(--s4); padding: var(--s6) var(--s4) var(--s8); }
+  .paper-scroll { margin-right: 0; margin-top: 72px; }
+}

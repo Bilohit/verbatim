@@ -22,6 +22,11 @@ if(Python3_FOUND)
     add_test(NAME G4_golden_guard_selftest COMMAND Python3::Interpreter -I ${PROJECT_SOURCE_DIR}/tools/check_golden.py --self-test)
 endif()
 
+# The UI test fixture (gui/tests/fixtures/core.json) must equal what core produces today.
+add_test(NAME ui_fixture_matches_core
+    COMMAND ${CMAKE_COMMAND} -DVB_SPEC=$<TARGET_FILE:vb_spec> -DOUT=${CMAKE_CURRENT_BINARY_DIR}/ui-fixture.json
+            -DEXPECTED=${PROJECT_SOURCE_DIR}/gui/tests/fixtures/core.json -P ${PROJECT_SOURCE_DIR}/tools/check_ui_fixture.cmake)
+
 # T02 acceptance: core/ has no JUCE include and no floating-point type.
 add_test(NAME core_no_float_no_juce
     COMMAND ${CMAKE_COMMAND} -DDIR=${PROJECT_SOURCE_DIR}/core -P ${PROJECT_SOURCE_DIR}/tools/check_core_pure.cmake)

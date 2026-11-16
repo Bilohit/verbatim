@@ -1,0 +1,54 @@
+/* Hallmark · component: plugin editor · genre: editorial · theme: custom (typewriter, docs/05-ui-design.md section 4)
+ * states: default · hover · focus · active · disabled · loading · error · success
+ * Tokens are the only colour, type and spacing values components use.
+ */
+:root {
+  /* Machine body */
+  --body: oklch(76% 0.05 168);
+  --body-ink: oklch(24% 0.03 168);
+  --hover: oklch(70% 0.05 168);
+  --platen: oklch(22% 0.01 168);
+  --platen-shadow: oklch(35% 0.05 168 / 0.5);
+  --paper-edge: oklch(60% 0.03 168);
+
+  /* Paper and ribbon */
+  --paper: oklch(97.5% 0.008 95);
+  --ink: oklch(22% 0.012 265);
+  --ink-faint: oklch(52% 0.012 265);
+  --ribbon: oklch(50% 0.2 27);
+  --selection: oklch(88% 0.05 27);
+
+  /* Keys */
+  --key: oklch(27% 0.02 168);
+  --key-ink: oklch(95% 0.02 95);
+  --key-rim: oklch(90% 0.012 168);
+  --key-rim-hover: oklch(99% 0.005 168);
+  --key-drop: oklch(45% 0.05 168);
+  --key-shadow: oklch(35% 0.05 168 / 0.45);
+
+  --focus: oklch(24% 0.03 168);
+
+  /* Type */
+  --font-text: "Courier Prime", "Courier New", monospace;
+  --font-ui: "Archivo Variable", "Archivo", system-ui, sans-serif;
+  --font-data: "IBM Plex Mono", ui-monospace, monospace;
+  --text-size: clamp(1.2rem, 2.7vw, 1.7rem);
+  --text-line: 1.5;
+
+  /* Space (4 px scale) and shape */
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 12px;
+  --s4: 16px;
+  --s6: 24px;
+  --s8: 32px;
+  --radius-body: 18px;
+  --key-size: 50px;
+  --key-icon: 22px;
+  --stagger: 26px;
+
+  /* Motion */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-fast: 90ms;
+}

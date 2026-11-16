@@ -3,6 +3,8 @@
 //   vb_spec --corpus in out     write one chainHash per corpus record
 // Text and corpus records use \xNN escapes for any byte (a backslash is \x5C).
 #include "Catalog.h"
+#include "Hash.h"
+#include "Parse.h"
 #include "Generate.h"
 #include "Serialize.h"
 
@@ -11,6 +13,7 @@
 #include <fstream>
 #include <iostream>
 #include <string>
+#include <vector>
 
 namespace
 {
@@ -63,6 +66,94 @@ void dump (const vb::ChainSpec& spec)
     std::printf ("chainHash %016" PRIx64 "\n", vb::chainHash (spec));
 }
 
+std::string jsonString (const std::string& s)
+{
+    std::string out = "\"";
+    for (unsigned char c : s)
+    {
+        if (c == '"' || c == '\\')
+        {
+            out += '\\';
+            out += static_cast<char> (c);
+        }
+        else if (c < 0x20)
+        {
+            char buf[8];
+            std::snprintf (buf, sizeof (buf), "\\u%04x", c);
+            out += buf;
+        }
+        else
+            out += static_cast<char> (c);
+    }
+    return out + "\"";
+}
+
+// UI test fixture: what core returns over the bridge for the 14 worked examples (tokens, chain types,
+// postmark hash, ignored lines). The mock bridge serves it; U4 checks the DOM against it.
+int uiFixture (const char* outPath)
+{
+    static const char* texts[] = { "hello", "dark tape, slow echo!", "tape echo", "TAPE echo!!", "dark!!", "echo 8 50%...",
+                                   "lo-fi \"radio\" > 7", "\xD0\xBF\xD1\x80\xD0\xB8\xD0\xB2\xD0\xB5\xD1\x82 \xD0\xBC\xD0\xB8\xD1\x80 \xE2\x9C\x89",
+                                   "warm tape\n\n& long echo\xE2\x80\xA6 ~?", "   ", "a\nb\nc\nd\ne", "DARK Dark dark bright",
+                                   "wait.. what...", "don't stop" };
+    static const char* classes[] = { "word", "direction", "op", "number", "ignored" };
+    std::ofstream out (outPath, std::ios::binary);
+    if (! out)
+        return 2;
+    out << "[\n";
+    for (std::size_t t = 0; t < std::size (texts); ++t)
+    {
+        const std::string text = texts[t];
+        const auto parsed = vb::parse (text);
+        const auto spec = vb::generate (text);
+        out << "  {\"text\": " << jsonString (text) << ", \"tokens\": [";
+        for (std::size_t l = 0; l < parsed.lines.size(); ++l)
+        {
+            out << (l ? ", " : "") << "[";
+            for (std::size_t k = 0; k < parsed.lines[l].tokens.size(); ++k)
+            {
+                const auto& tok = parsed.lines[l].tokens[k];
+                out << (k ? ", " : "") << "{\"start\": " << tok.start << ", \"length\": " << tok.length << ", \"class\": \""
+                    << classes[static_cast<int> (tok.cls)] << "\"}";
+            }
+            out << "]";
+        }
+        out << "], \"ignoredLines\": [";
+        bool first = true;
+        for (std::size_t l = 0; l < parsed.lines.size(); ++l)
+            if (parsed.lines[l].ignored)
+            {
+                out << (first ? "" : ", ") << l;
+                first = false;
+            }
+        std::string seedHash;
+        if (! spec.lanes.empty())
+        {
+            std::vector<std::uint8_t> bytes;
+            for (const auto& lane : spec.lanes)
+                for (int b = 0; b < 8; ++b)
+                    bytes.push_back (static_cast<std::uint8_t> (lane.seed >> (8 * b)));
+            char buf[24];
+            std::snprintf (buf, sizeof (buf), "%016" PRIx64, vb::xxh64 (bytes.data(), bytes.size(), 0));
+            seedHash = std::string (buf).substr (0, 8);
+        }
+        out << "], \"seedHash\": \"" << seedHash << "\", \"chain\": [";
+        for (std::size_t l = 0; l < spec.lanes.size(); ++l)
+        {
+            out << (l ? ", " : "") << "{\"lane\": " << l << ", \"modules\": [";
+            for (int k = 0; k < spec.lanes[l].nModules; ++k)
+            {
+                const auto type = spec.lanes[l].slots[static_cast<std::size_t> (k)].type;
+                out << (k ? ", " : "") << "{\"type\": " << static_cast<int> (type) << ", \"name\": \"" << vb::catalog[type].name << "\", \"held\": false}";
+            }
+            out << "]}";
+        }
+        out << "]}" << (t + 1 < std::size (texts) ? "," : "") << "\n";
+    }
+    out << "]\n";
+    return 0;
+}
+
 int corpus (const char* inPath, const char* outPath)
 {
     std::ifstream in (inPath, std::ios::binary);
@@ -90,6 +181,8 @@ int corpus (const char* inPath, const char* outPath)
 
 int main (int argc, char** argv)
 {
+    if (argc == 3 && std::string (argv[1]) == "--ui-fixture")
+        return uiFixture (argv[2]);
     if (argc == 4 && std::string (argv[1]) == "--corpus")
         return corpus (argv[2], argv[3]);
     if (argc == 2)
