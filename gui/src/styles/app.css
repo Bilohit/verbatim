@@ -129,11 +129,12 @@ body { color: var(--body-ink); font-family: var(--font-ui); line-height: 1.5; }
   border: 2.5px solid var(--key-rim);
   box-shadow: 0 4px 0 var(--key-drop), 0 7px 8px var(--key-shadow);
   cursor: pointer;
-  transition: transform var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
+  transition: border-color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
 }
 .key:hover { border-color: var(--key-rim-hover); }
+/* M2 latch: the 4 px travel is animated by framer-motion (Key.tsx); CSS only swaps the shadow. */
 .key:active,
-.key[aria-pressed="true"] { transform: translateY(4px); box-shadow: 0 1px 2px var(--key-shadow); }
+.key[aria-pressed="true"] { box-shadow: 0 1px 2px var(--key-shadow); }
 .key[aria-pressed="true"] { border-color: var(--ribbon); }
 .key:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; transition: none; }
 .key:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -275,3 +276,14 @@ body { color: var(--body-ink); font-family: var(--font-ui); line-height: 1.5; }
 .add-item:hover:not(:disabled) { border-color: var(--ink-faint); }
 .add-item:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .add-item:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* M3 living ink: the full-ink copy sits over the faint one; its per-line opacity follows the lane level.
+   Up to 200 characters a line, each character carries a slow phase offset. */
+.ink { position: relative; }
+.ink-hot { position: absolute; inset: 0; color: var(--ink); pointer-events: none; }
+.ink-hot [data-ch] { animation: ink-phase 2.4s var(--ease-in-out) infinite; animation-delay: calc(var(--i) * -80ms); }
+.ink-hot .strike { display: inline-block; }
+@keyframes ink-phase { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .ink-hot [data-ch] { animation: none; }
+}

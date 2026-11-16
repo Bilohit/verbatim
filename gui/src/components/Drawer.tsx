@@ -1,7 +1,9 @@
 // Advanced drawer for the selected effect: labelled sliders with units (values come mapped from core),
 // hold toggle, remove. Any slider edit auto-holds (docs/02-spec.md R2).
 import { LockSimple, LockSimpleOpen, Trash } from "@phosphor-icons/react";
+import { motion } from "framer-motion";
 import type { Module } from "../bridge/types";
+import { drawer, useMotionPrefs } from "../motion";
 import { effect } from "../icons";
 
 type Props = {
@@ -12,12 +14,13 @@ type Props = {
 };
 
 export function Drawer({ module, onEdit, onHold, onRemove }: Props) {
+  const { reduce } = useMotionPrefs();
   const { name } = effect(module.type);
   const p = module.p ?? [32768, 32768, 32768, 32768, 32768, 32768];
   const mix = module.mix ?? 32768;
   const send = (index: number, u: number) => (index === 6 ? onEdit(p, u) : onEdit(p.map((v, i) => (i === index ? u : v)), mix));
   return (
-    <section className="drawer" aria-label={name}>
+    <motion.section className="drawer" aria-label={name} {...drawer(reduce)}>
       <h2 className="drawer-name">{name}</h2>
       <div className="drawer-params">
         {(module.params ?? []).map((q) => (
@@ -52,6 +55,6 @@ export function Drawer({ module, onEdit, onHold, onRemove }: Props) {
           <Trash size={20} aria-hidden="true" />
         </button>
       </div>
-    </section>
+    </motion.section>
   );
 }

@@ -1,5 +1,6 @@
 // The typewriter machine: top bar, paper on its platen, carriage scale, key rows, and the Advanced drawer.
 import { SlidersHorizontal } from "@phosphor-icons/react";
+import { AnimatePresence } from "framer-motion";
 import { startTransition, useEffect, useRef, useState } from "react";
 import { bridge, type Lane, type OverrideArgs, type TextPayload } from "../bridge";
 import { AddMenu } from "./AddMenu";
@@ -124,8 +125,10 @@ export function Machine() {
           }}
         />
       ) : null}
+      <AnimatePresence>
       {advanced && selected && sel ? (
         <Drawer
+          key="drawer"
           module={sel}
           onEdit={(p, mix) => override({ ...selected, op: "edit", module: { type: sel.type, p, mix } })}
           onHold={() => override({ ...selected, op: sel.held ? "release" : "hold" })}
@@ -136,6 +139,7 @@ export function Machine() {
           }}
         />
       ) : null}
+      </AnimatePresence>
       <p className="sr-only" role="status">
         {statusLine(text, ignored, lanes)}
       </p>
