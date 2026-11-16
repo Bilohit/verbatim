@@ -32,7 +32,7 @@ export function Drawer({ module, onEdit, onHold, onRemove }: Props) {
               max={65535}
               step={1} // core values are not on any step grid; a grid would snap them and fire a spurious edit
               value={q.u}
-              aria-label={q.name}
+              aria-label={`${name} ${q.name}`}
               aria-valuetext={q.text}
               onKeyDown={(e) => {
                 const delta = { ArrowRight: 656, ArrowUp: 656, ArrowLeft: -656, ArrowDown: -656, PageUp: 6554, PageDown: -6554 }[e.key];

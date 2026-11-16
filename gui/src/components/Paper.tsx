@@ -13,9 +13,11 @@ type Props = {
   ignored: number[];
   seedHash: string;
   onText: (text: string) => void;
+  readOnly?: boolean;
+  shake?: number; // E2: changes when input was refused
 };
 
-export function Paper({ text, tokens, ignored, seedHash, onText }: Props) {
+export function Paper({ text, tokens, ignored, seedHash, onText, readOnly = false, shake = 0 }: Props) {
   const { reduce } = useMotionPrefs();
   const [scope, animate] = useAnimate();
   const [struck, setStruck] = useState<{ line: number; col: number } | null>(null);
@@ -39,7 +41,7 @@ export function Paper({ text, tokens, ignored, seedHash, onText }: Props) {
 
   return (
     <div className="paper" data-paper>
-      <Postmark hash={seedHash} />
+      <Postmark hash={seedHash} shake={shake} />
       <div className="paper-scroll">
         <div className="editor" ref={scope}>
           <InkLayer lines={lines} tokens={tokens} ignored={new Set(ignored)} struck={struck} />
@@ -51,6 +53,7 @@ export function Paper({ text, tokens, ignored, seedHash, onText }: Props) {
             autoCorrect="off"
             autoCapitalize="off"
             value={text}
+            readOnly={readOnly}
             onChange={(e) => change(e.target.value, e.target.selectionStart ?? e.target.value.length)}
           />
         </div>

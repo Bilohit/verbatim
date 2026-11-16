@@ -8,6 +8,7 @@ import { Drawer } from "./Drawer";
 import { KeyRows } from "./KeyRow";
 import { Meter } from "./Meter";
 import { Paper } from "./Paper";
+import { RollButton } from "./RollButton";
 import { Scale } from "./Scale";
 
 const SAT = 0;
@@ -26,6 +27,8 @@ export function Machine() {
   const [advanced, setAdvanced] = useState(false);
   const [selected, setSelected] = useState<{ lane: number; slot: number } | null>(null);
   const [menu, setMenu] = useState<{ lane: number; button: HTMLButtonElement } | null>(null);
+  const [full, setFull] = useState(0); // E2: >0 while the last input was refused (shake key)
+  const [stateError, setStateError] = useState(false);
   const latest = useRef("");
 
   useEffect(() => {
@@ -34,10 +37,16 @@ export function Machine() {
       setText(s.text);
       setPayload(s);
       setAdvanced(!!s.ui?.advanced);
+      setStateError(!!s.stateError);
     });
   }, []);
 
   const onText = (next: string) => {
+    if (new TextEncoder().encode(next).length > 4096) {
+      setFull((n) => n + 1); // E2: further input ignored
+      return;
+    }
+    setFull(0);
     latest.current = next;
     setText(next); // paint the character now; tokens and keys follow from core
     setSelected(null);
@@ -93,23 +102,27 @@ export function Machine() {
 
   return (
     <main className="machine" data-advanced={advanced ? "true" : undefined}>
-      <header className="top">
-        <span className="wordmark">Verbatim</span>
-        <div className="top-r">
-          <Meter />
-          <button type="button" className="icon-btn" aria-label="Advanced" aria-pressed={advanced} onClick={toggleAdvanced}>
-            <SlidersHorizontal size={22} aria-hidden="true" />
-          </button>
-        </div>
-      </header>
       <Paper
         text={text}
         tokens={fresh?.tokens ?? null}
         ignored={ignored}
         seedHash={text.trim() ? (fresh?.seedHash ?? payload?.seedHash ?? "") : ""}
         onText={onText}
+        readOnly={stateError}
+        shake={full}
       />
+      <header className="top">
+        <span className="wordmark">Verbatim</span>
+        <div className="top-r">
+          <Meter />
+          <RollButton disabled={stateError} />
+          <button type="button" className="icon-btn" aria-label="Advanced" aria-pressed={advanced} onClick={toggleAdvanced} disabled={stateError}>
+            <SlidersHorizontal size={22} aria-hidden="true" />
+          </button>
+        </div>
+      </header>
       <Scale />
+      {stateError ? <p className="state-error">Saved with a newer Verbatim. Update to edit.</p> : null}
       <KeyRows lanes={lanes} advanced={advanced} selected={selected} onPress={onPress} onAdd={(lane, button) => setMenu({ lane, button })} />
       {menu ? (
         <AddMenu
@@ -141,7 +154,7 @@ export function Machine() {
       ) : null}
       </AnimatePresence>
       <p className="sr-only" role="status">
-        {statusLine(text, ignored, lanes)}
+        {full > 0 ? "Text is full." : statusLine(text, ignored, lanes)}
       </p>
     </main>
   );

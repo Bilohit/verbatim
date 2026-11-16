@@ -98,7 +98,8 @@ export function createMockBridge(delayMs = 0): Bridge & { calls: { name: string;
     },
     getState() {
       calls.push({ name: "getState", args: null });
-      return later({ ...current, ui } as State);
+      const stateError = typeof location !== "undefined" && new URLSearchParams(location.search).get("state") === "error";
+      return later({ ...current, ui, stateError } as State);
     },
     param(name: keyof typeof PARAMS): ParamControl {
       const st = paramState(name), r = PARAMS[name];

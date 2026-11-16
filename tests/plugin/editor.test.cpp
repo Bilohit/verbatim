@@ -53,12 +53,12 @@ TEST_CASE ("Bridge setText and getState drive the processor", "[bridge]")
     CHECK (p.getText() == "\xD0\xBF\xD1\x80 \xE2\x9C\x89");
 }
 
-TEST_CASE ("U9 editor open and close 10 times, and two editors at once", "[U9]")
+TEST_CASE ("U9 editor open and close 100 times, and two editors at once", "[U9]")
 {
     JuceInit juce;
     VerbatimProcessor p;
     p.prepareToPlay (48000.0, 512);
-    for (int i = 0; i < 10; ++i)
+    for (int i = 0; i < 100; ++i)
     {
         std::unique_ptr<juce::AudioProcessorEditor> e (p.createEditor());
         REQUIRE (e != nullptr);
