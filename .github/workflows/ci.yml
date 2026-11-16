@@ -1,8 +1,9 @@
 name: CI
 
+# Manual only: GitHub Actions is unavailable on this account, so pushes do not trigger it.
+# Run it from the Actions tab (Run workflow) once Actions is available.
 on:
-  push:
-  pull_request:
+  workflow_dispatch:
 
 jobs:
   win-msvc:

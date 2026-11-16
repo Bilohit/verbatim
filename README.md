@@ -133,7 +133,7 @@ The design documents behind every decision are in [`docs/`](docs/).
 | Same text, same chain, forever | 420 golden texts (every mark, word, script, invalid byte and edge case) hash identically on MSVC, clang-cl, Linux clang, Linux gcc and macOS clang; a CI guard blocks any change to the frozen hashes |
 | Same session, same audio | Renders are bit-identical across fresh instances, `reset()`, project reload and two bounces from the same play start; output stays within -100 dBFS across host block sizes |
 | Never harms your mix | 2000 random texts and 200 extreme cases (silence, DC, full-scale square, 44.1 to 192 kHz, 16 to 8192-sample blocks): no NaN, never above 0 dBFS, no self-oscillation |
-| Real-time safe | Zero allocations on the audio thread through chain swaps and automation; a lock audit of every audio-thread function; RealtimeSanitizer in CI |
+| Real-time safe | Zero allocations on the audio thread through chain swaps and automation; a lock audit of every audio-thread function |
 | Light on CPU | The worst case (4 voices x 8 effects including pitch, granular and reverb) runs at about 11x real time |
 | A well-behaved plugin | pluginval at strictness 10 and Steinberg's VST3 validator (47/47) |
 | A usable editor | 59 browser tests: input latency (p95 under 10 ms), core-exact token colouring, keyboard-only use, axe accessibility scan, reduced motion, screenshot baselines |
