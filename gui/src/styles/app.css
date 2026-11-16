@@ -159,3 +159,48 @@ body { color: var(--body-ink); font-family: var(--font-ui); line-height: 1.5; }
 @container (max-width: 800px) {
   .row { padding-left: 0; }
 }
+
+/* Output meter: two level bars on a ruled ground, red clip tick. */
+.top-r { display: flex; align-items: center; gap: var(--s4); }
+.meter {
+  position: relative;
+  display: grid;
+  gap: 3px;
+  width: 64px;
+  background: repeating-linear-gradient(var(--hover) 0 4px, transparent 4px 7px);
+}
+.meter i { display: block; height: 4px; background: var(--body-ink); transform-origin: left; transform: scaleX(0); }
+.clip-tick { position: absolute; right: -6px; top: 0; bottom: 0; width: 3px; background: var(--ribbon); }
+.clip-tick[hidden] { display: none; }
+
+/* Carriage scale: ruler-tick track, red marker (docs/05-ui-design.md section 2). */
+.scale { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s4) var(--s8); padding: 0 var(--s6); }
+.slider { display: flex; align-items: center; gap: var(--s2); color: var(--body-ink); cursor: pointer; }
+.slider-track { position: relative; display: block; }
+.slider input {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 140px;
+  height: 20px;
+  margin: 0;
+  background: repeating-linear-gradient(90deg, var(--body-ink) 0 1px, transparent 1px 10px) left bottom / 100% 9px no-repeat;
+  cursor: pointer;
+}
+.slider input::-webkit-slider-thumb { -webkit-appearance: none; width: 5px; height: 20px; background: var(--ribbon); border: 0; border-radius: 1px; }
+.slider input:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
+.slider input:hover::-webkit-slider-thumb { width: 7px; }
+.slider-value {
+  position: absolute;
+  bottom: calc(100% + var(--s1));
+  left: calc(var(--pos) * (100% - 5px));
+  transform: translateX(-50%);
+  font-family: var(--font-data);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+@container (max-width: 800px) {
+  .scale { display: grid; grid-template-columns: repeat(2, max-content); }
+}

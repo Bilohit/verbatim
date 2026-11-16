@@ -24,11 +24,23 @@ export type OverrideArgs = { lane: number; op: OverrideOp; slot: number; module?
 
 export type Levels = { lanes: number[]; out: [number, number]; clip: boolean };
 
+// A host parameter (mix, macro, output) as the UI sees it: normalised 0..1 plus the scaled value.
+export interface ParamControl {
+  normalised(): number;
+  scaled(): number;
+  range(): { start: number; end: number };
+  set(normalised: number): void;
+  begin(): void;
+  end(): void;
+  onChange(cb: () => void): () => void;
+}
+
 export interface Bridge {
   setText(text: string): Promise<TextPayload>;
   setOverride(args: OverrideArgs): Promise<{ ok: boolean; chain: Lane[] }>;
   setUi(ui: Partial<UiState>): Promise<void>;
   getState(): Promise<State>;
+  param(name: "mix" | "macro" | "output"): ParamControl;
   on(event: "levels", cb: (l: Levels) => void): () => void;
   on(event: "chain", cb: (s: State) => void): () => void;
 }

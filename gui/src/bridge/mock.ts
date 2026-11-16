@@ -1,7 +1,10 @@
 // Mock bridge for browser tests (/?mock). Worked examples come from core via tests/fixtures/core.json
 // (vb_spec --ui-fixture); other text gets a plain word split, which is enough for layout and timing tests.
 import fixture from "../../tests/fixtures/core.json";
-import type { Bridge, Lane, Levels, OverrideArgs, State, TextPayload, Token, UiState } from "./types";
+import type { Bridge, Lane, Levels, OverrideArgs, ParamControl, State, TextPayload, Token, UiState } from "./types";
+
+// Host parameter ranges and defaults (docs/02-spec.md section 1).
+const PARAMS = { mix: { start: 0, end: 100, def: 100 }, macro: { start: 0, end: 1, def: 0.5 }, output: { start: -24, end: 12, def: 0 } };
 
 const known = new Map((fixture as unknown as TextPayload[]).map((f) => [f.text, f]));
 
@@ -37,6 +40,14 @@ export function createMockBridge(delayMs = 0): Bridge & { calls: { name: string;
   let ui: UiState = { w: 900, h: 620, advanced: false };
   const calls: { name: string; args: unknown }[] = [];
   const levelsListeners = new Set<(l: Levels) => void>();
+  const params = new Map<string, { value: number; listeners: Set<() => void> }>();
+  const paramState = (name: keyof typeof PARAMS) => {
+    if (!params.has(name)) {
+      const r = PARAMS[name];
+      params.set(name, { value: (r.def - r.start) / (r.end - r.start), listeners: new Set() });
+    }
+    return params.get(name)!;
+  };
   const later = <T,>(v: T) => new Promise<T>((r) => setTimeout(() => r(v), delayMs));
 
   const bridge = {
@@ -68,6 +79,32 @@ export function createMockBridge(delayMs = 0): Bridge & { calls: { name: string;
     getState() {
       calls.push({ name: "getState", args: null });
       return later({ ...current, ui } as State);
+    },
+    param(name: keyof typeof PARAMS): ParamControl {
+      const st = paramState(name), r = PARAMS[name];
+      return {
+        normalised: () => st.value,
+        scaled: () => r.start + (r.end - r.start) * st.value,
+        range: () => ({ start: r.start, end: r.end }),
+        set: (v) => {
+          st.value = Math.min(1, Math.max(0, v));
+          calls.push({ name: `param:${name}`, args: { op: "set", value: st.value } });
+        },
+        begin: () => calls.push({ name: `param:${name}`, args: { op: "begin" } }),
+        end: () => calls.push({ name: `param:${name}`, args: { op: "end" } }),
+        onChange: (cb) => {
+          st.listeners.add(cb);
+          return () => st.listeners.delete(cb);
+        },
+      };
+    },
+    hostSet(name: keyof typeof PARAMS, v: number) {
+      const st = paramState(name);
+      st.value = v;
+      st.listeners.forEach((cb) => cb());
+    },
+    emitLevels(l: Levels) {
+      levelsListeners.forEach((cb) => cb(l));
     },
     on(event: string, cb: (x: never) => void) {
       if (event === "levels") levelsListeners.add(cb as (l: Levels) => void);

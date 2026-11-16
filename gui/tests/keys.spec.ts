@@ -48,9 +48,10 @@ test("Space and Enter activate a focused key", async ({ page }) => {
 test("The name shows at once on keyboard focus", async ({ page }) => {
   await page.goto("/?mock");
   await seed(page).fill("hello");
-  await seed(page).press("Tab");
+  // Tab order: text, top-bar buttons, Mix, Macro, Output, then the keys (docs/05-ui-design.md section 3).
+  await seed(page).focus();
+  for (let i = 0; i < 10 && !(await page.evaluate(() => document.activeElement?.classList.contains("key"))); ++i) await page.keyboard.press("Tab");
   const tips = page.locator(".key-tip");
-  // Tab from the text reaches the first key (Roll / Advanced / sliders arrive in later tasks).
   await expect(page.locator(".key:focus-visible")).toHaveCount(1);
   await expect(tips.filter({ hasText: "Saturation" })).toBeVisible();
 });

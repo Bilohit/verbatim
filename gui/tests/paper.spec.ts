@@ -26,7 +26,9 @@ async function typeAndMeasure(page: Page, chars: string) {
       requestAnimationFrame(check);
     }, true);
   });
-  for (const c of chars) await page.keyboard.type(c);
+  // Fast human pace (~33 keys/s). Typing 1 ms apart queues ~20 keys behind the one-time cold-start frame of a
+  // fresh browser and measures the queue, not the input path.
+  for (const c of chars) await page.keyboard.type(c, { delay: 0 }).then(() => page.waitForTimeout(30));
   await page.waitForTimeout(100);
   const lat = await page.evaluate(() => (window as unknown as { __lat: number[] }).__lat);
   lat.sort((a, b) => a - b);
