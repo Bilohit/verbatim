@@ -20,8 +20,18 @@ struct ModCtx
     float mod = 0.0f;          // M in [-1, 1], already scaled by Macro
     float macro = 0.5f;
     bool macroScaling = true;  // false only in the D8 reference build
-    double bpm = 120.0;
+    double bpm = 120.0;        // smoothed host tempo (120 when unknown)
+    std::uint8_t timeDiv = 0;  // lane time base: 0 = free, else notes of 1/timeDiv
 };
+
+// Note length T = 4/timeDiv beats at bpm, halved until it fits maxMs (docs/03-dsp-catalog.md 1.3).
+inline float noteMs (const ModCtx& ctx, float maxMs)
+{
+    float ms = static_cast<float> (4.0 / ctx.timeDiv * 60000.0 / ctx.bpm);
+    while (ms > maxMs)
+        ms *= 0.5f;
+    return ms;
+}
 
 // Effective module mix under Macro (docs/03-dsp-catalog.md 1.4). Macro 0.5 returns mix unchanged.
 inline float effectiveMix (float mix, const ModCtx& ctx)

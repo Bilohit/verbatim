@@ -32,6 +32,8 @@ public:
     void setOutputDb (float db) { outputDbTarget.store (db); }
     void setMacro (float m01) { macroTarget.store (m01); }
     void setMacroScalingEnabled (bool on) { macroScaling.store (on); } // test hook for D8
+    // Host tempo (bpm <= 0: unknown, 120 used) and play state; call before process() each block.
+    void setTransport (double bpm, bool playing) { bpmTarget.store (bpm > 0.0 ? bpm : 120.0); playingNow.store (playing); }
     void setBypass (bool b) { bypassTarget.store (b ? 1.0f : 0.0f); } // ramps to the delayed dry signal
 
     int latencySamples() const { return lFixed; }
@@ -68,6 +70,12 @@ private:
     int dryPos = 0;
     std::atomic<float> mixTarget { 1.0f }, outputDbTarget { 0.0f }, bypassTarget { 0.0f }, macroTarget { 0.5f };
     std::atomic<bool> macroScaling { true };
+    std::atomic<double> bpmTarget { 120.0 };
+    std::atomic<bool> playingNow { false };
+    bool wasPlaying = false;
+    double bpmCurrent = 120.0;
+    int fadeInPos = 0, fadeInLen = 1; // 5 ms fade-in after a transport reset
+    void transportReset();            // audio-thread
     float mixCurrent = 1.0f, gainCurrent = 1.0f, bypassCurrent = 0.0f, macroCurrent = 0.5f;
     std::vector<float> bypassRamp, macroRamp;
     std::atomic<int> nanTotal { 0 };

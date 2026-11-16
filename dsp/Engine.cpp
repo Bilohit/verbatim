@@ -126,11 +126,14 @@ void Engine::prepare (double sr, int block)
     collectGarbage();
     active = build (lastSpec);
     fadeLen = static_cast<int> (std::lround (0.03 * sr));
+    fadeInLen = std::max (1, static_cast<int> (std::lround (0.005 * sr)));
+    fadeInPos = fadeInLen;
 
     mixCurrent = mixTarget.load();
     gainCurrent = dbToGain (outputDbTarget.load());
     bypassCurrent = bypassTarget.load();
     macroCurrent = macroTarget.load();
+    bpmCurrent = bpmTarget.load();
 }
 
 void Engine::setSpec (const vb::ChainSpec& spec)
@@ -169,6 +172,37 @@ void Engine::reset()
     gainCurrent = dbToGain (outputDbTarget.load());
     bypassCurrent = bypassTarget.load();
     macroCurrent = macroTarget.load();
+    bpmCurrent = bpmTarget.load();
+}
+
+void Engine::transportReset() // audio-thread
+{
+    // Stopped -> playing (docs/02-spec.md C9): finish any swap at once, take a pending chain without a
+    // crossfade, clear all chain state and the dry delay, then fade in over 5 ms.
+    const auto pushRetire = [this] (Chain* c) {
+        const int w = retireWrite.load (std::memory_order_relaxed);
+        retire[w % retireCapacity] = c;
+        retireWrite.store (w + 1, std::memory_order_release);
+    };
+    const auto space = [this] { return retireCapacity - (retireWrite.load (std::memory_order_relaxed) - retireRead.load (std::memory_order_acquire)); };
+    if (fading.load (std::memory_order_relaxed) && space() > 0)
+    {
+        pushRetire (old);
+        old = nullptr;
+        fading.store (false);
+    }
+    if (! fading.load (std::memory_order_relaxed) && space() > 0)
+        if (auto* next = pending.exchange (nullptr))
+        {
+            pushRetire (active);
+            active = next;
+        }
+    for (auto& l : active->lanes)
+        l->reset();
+    std::fill (dryBufL.begin(), dryBufL.end(), 0.0f);
+    std::fill (dryBufR.begin(), dryBufR.end(), 0.0f);
+    dryPos = 0;
+    fadeInPos = 0;
 }
 
 void Engine::process (float* L, float* R, int n) // audio-thread
@@ -176,6 +210,13 @@ void Engine::process (float* L, float* R, int n) // audio-thread
     juce::ScopedNoDenormals noDenormals;
     if (active == nullptr || n <= 0)
         return;
+
+    const bool playing = playingNow.load (std::memory_order_relaxed);
+    if (playing && ! wasPlaying)
+        transportReset();
+    wasPlaying = playing;
+    // Tempo changes glide over about 50 ms.
+    bpmCurrent += (bpmTarget.load (std::memory_order_relaxed) - bpmCurrent) * (1.0 - std::exp (-n / (0.05 * sampleRate)));
 
     // Take a pending chain when not fading and the retire FIFO can accept the old one.
     const int used = retireWrite.load (std::memory_order_relaxed) - retireRead.load (std::memory_order_acquire);
@@ -228,6 +269,7 @@ void Engine::process (float* L, float* R, int n) // audio-thread
     Lane::BlockCtx ctx;
     ctx.macro = macroRamp.data();
     ctx.macroScaling = macroScaling.load (std::memory_order_relaxed);
+    ctx.bpm = bpmCurrent;
     int nans = active->render (inL.data(), inR.data(), dryL.data(), dryR.data(), mixRamp.data(), outA_L.data(), outA_R.data(), n, ctx);
     if (fading.load (std::memory_order_relaxed))
     {
@@ -264,6 +306,12 @@ void Engine::process (float* L, float* R, int n) // audio-thread
         const float b = bypassRamp[k];
         L[i] = b == 0.0f ? safetyClip (l) : safetyClip (l) * (1.0f - b) + dryL[k] * b;
         R[i] = b == 0.0f ? safetyClip (r) : safetyClip (r) * (1.0f - b) + dryR[k] * b;
+        if (fadeInPos < fadeInLen)
+        {
+            const float g = static_cast<float> (fadeInPos++) / static_cast<float> (fadeInLen);
+            L[i] *= g;
+            R[i] *= g;
+        }
         pkL = std::fmax (pkL, std::abs (L[i]));
         pkR = std::fmax (pkR, std::abs (R[i]));
     }

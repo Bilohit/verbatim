@@ -61,6 +61,17 @@ void VerbatimProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::Mi
     engine.setOutputDb (output->get());
     engine.setBypass (bypass->get());
 
+    double bpm = 0.0; // unknown -> 120 (A3)
+    bool playing = false;
+    if (auto* head = getPlayHead())
+        if (const auto pos = head->getPosition())
+        {
+            if (const auto b = pos->getBpm())
+                bpm = *b;
+            playing = pos->getIsPlaying();
+        }
+    engine.setTransport (bpm, playing);
+
     // Internal processing is always stereo; hosts may send blocks larger than prepared.
     auto* L = scratch.getWritePointer (0);
     auto* R = scratch.getWritePointer (1);

@@ -39,7 +39,8 @@ if(VERBATIM_BUILD_DSP)
         dsp/engine.test.cpp
         dsp/lane.test.cpp
         dsp/feedback.test.cpp
-        dsp/mod.test.cpp)
+        dsp/mod.test.cpp
+        dsp/timebase.test.cpp)
     target_include_directories(verbatim_dsp_tests PRIVATE ${PROJECT_SOURCE_DIR} ${PROJECT_SOURCE_DIR}/dsp)
     target_compile_definitions(verbatim_dsp_tests PRIVATE
         JUCE_STANDALONE_APPLICATION=1 JUCE_USE_CURL=0 JUCE_WEB_BROWSER=0)
@@ -51,7 +52,7 @@ endif()
 
 if(VERBATIM_BUILD_PLUGIN)
     # Links the plugin's shared-code target, which holds the processor and its JUCE modules.
-    add_executable(verbatim_plugin_tests plugin/state.test.cpp plugin/editor.test.cpp)
+    add_executable(verbatim_plugin_tests plugin/state.test.cpp plugin/editor.test.cpp plugin/transport.test.cpp)
     target_include_directories(verbatim_plugin_tests PRIVATE ${PROJECT_SOURCE_DIR} ${PROJECT_SOURCE_DIR}/dsp
         $<TARGET_PROPERTY:Verbatim,INCLUDE_DIRECTORIES>)
     target_compile_definitions(verbatim_plugin_tests PRIVATE $<TARGET_PROPERTY:Verbatim,COMPILE_DEFINITIONS>)

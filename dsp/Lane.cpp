@@ -150,6 +150,7 @@ void Lane::runModules (std::size_t from, std::size_t to, float* L, float* R, int
     ctx.macro = cellMacro;
     ctx.macroScaling = block->macroScaling;
     ctx.bpm = block->bpm;
+    ctx.timeDiv = spec.timeDiv;
     for (std::size_t k = from; k < to; ++k)
     {
         ctx.mod = mod.valueFor (static_cast<int> (k));
